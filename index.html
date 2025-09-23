@@ -499,8 +499,18 @@
                 loadingSpinner.classList.remove('hidden');
                 generateBtn.disabled = true;
 
-                // --- API Call to Gemini directly from the browser ---
-                const apiKey = ""; // Canvas provides this at runtime
+                // Use the API key provided by the canvas environment
+                const apiKey = typeof __gemini_api_key !== 'undefined' ? __gemini_api_key : '';
+                
+                if (!apiKey) {
+                    errorText.textContent = "API key is not available. This is a platform issue, please try again later.";
+                    errorContainer.classList.remove('hidden');
+                    buttonText.textContent = 'Generate Insight ✨';
+                    loadingSpinner.classList.add('hidden');
+                    generateBtn.disabled = false;
+                    return;
+                }
+
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
                 const systemPrompt = `You are a world-class thought leader in AI and digital transformation. Your task is to generate a concise, professional, single-paragraph summary for a user-provided topic.`;
