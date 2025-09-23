@@ -482,44 +482,26 @@
             contextSelect.appendChild(option);
         });
 
-        // Event listener for general insight generation
-        generateBtn.addEventListener('click', async () => {
-            const topic = topicInput.value.trim();
-            if (!topic) {
-                errorMessage.textContent = 'Please enter a topic.';
-                errorContainer.classList.remove('hidden');
-                return;
-            }
-            
+        // Function to handle the API call to the serverless function
+        async function fetchInsight(prompt) {
             loadingIndicator.classList.remove('hidden');
             resultContainer.classList.add('hidden');
             errorContainer.classList.add('hidden');
 
             try {
-                const payload = {
-                    contents: [{
-                        parts: [{
-                            text: `Act as a world-class AI and Digital Transformation leader and generate a one-paragraph thought leadership insight on the following topic: ${topic}.`
-                        }]
-                    }],
-                    tools: [{ "google_search": {} }],
-                };
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
-                const response = await fetch(apiUrl, {
+                const response = await fetch('/api/generate-insight', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ prompt })
                 });
 
                 if (!response.ok) {
                     let errorMsg = `HTTP error! Status: ${response.status}`;
                     try {
                         const errorData = await response.json();
-                        errorMsg = errorData.error?.message || errorData.error || errorMsg;
+                        errorMsg = errorData.details || errorData.error || errorMsg;
                     } catch (jsonError) {
                         errorMsg = response.statusText || errorMsg;
                     }
@@ -532,7 +514,7 @@
                     insightText.textContent = text;
                     resultContainer.classList.remove('hidden');
                 } else {
-                    throw new Error('No content generated.');
+                    throw new Error('No content generated from the API.');
                 }
             } catch (error) {
                 console.error('API call failed:', error);
@@ -541,6 +523,18 @@
             } finally {
                 loadingIndicator.classList.add('hidden');
             }
+        }
+
+        // Event listener for general insight generation
+        generateBtn.addEventListener('click', async () => {
+            const topic = topicInput.value.trim();
+            if (!topic) {
+                errorMessage.textContent = 'Please enter a topic.';
+                errorContainer.classList.remove('hidden');
+                return;
+            }
+            const prompt = `Act as a world-class AI and Digital Transformation leader and generate a one-paragraph thought leadership insight on the following topic: ${topic}.`;
+            fetchInsight(prompt);
         });
 
         // Event listener for context-aware insight generation
@@ -551,60 +545,10 @@
                 errorContainer.classList.remove('hidden');
                 return;
             }
-
             const topic = selectedOption.value;
             const context = selectedOption.dataset.context;
-            
-            loadingIndicator.classList.remove('hidden');
-            resultContainer.classList.add('hidden');
-            errorContainer.classList.add('hidden');
-
-            try {
-                const payload = {
-                    contents: [{
-                        parts: [{
-                            text: `Act as a world-class AI and Digital Transformation leader. I have a ${topic} project. Can you provide a one-paragraph professional thought leadership insight based on the following context: "${context}".`
-                        }]
-                    }],
-                    tools: [{ "google_search": {} }],
-                };
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    let errorMsg = `HTTP error! Status: ${response.status}`;
-                    try {
-                        const errorData = await response.json();
-                        errorMsg = errorData.error?.message || errorData.error || errorMsg;
-                    } catch (jsonError) {
-                        errorMsg = response.statusText || errorMsg;
-                    }
-                    throw new Error(errorMsg);
-                }
-
-                const data = await response.json();
-                const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (text) {
-                    insightText.textContent = text;
-                    resultContainer.classList.remove('hidden');
-                } else {
-                    throw new Error('No content generated.');
-                }
-            } catch (error) {
-                console.error('API call failed:', error);
-                errorMessage.textContent = error.message || 'An unexpected network error occurred.';
-                errorContainer.classList.remove('hidden');
-            } finally {
-                loadingIndicator.classList.add('hidden');
-            }
+            const prompt = `Act as a world-class AI and Digital Transformation leader. I have a ${topic} project. Can you provide a one-paragraph professional thought leadership insight based on the following context: "${context}".`;
+            fetchInsight(prompt);
         });
 
         // Copy button for the generated insight
@@ -633,4 +577,3 @@
 
 </body>
 </html>
-
