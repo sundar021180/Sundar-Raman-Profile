@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Resume | Dr. Sundar Raman Subramanian</title>
+    <title>Interactive Resume | Dr. Sundar Raman S</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -149,7 +149,7 @@
                 </div>
                 <div class="shrink-0">
                     <!-- Updated the image source to a local file path -->
-                    <img src="profile-image.jpg" alt="Dr. Sundar Raman Subramanian" class="w-48 h-48 rounded-full object-cover shadow-lg">
+                    <img src="photo.jpg" alt="Dr. Sundar Raman S" class="w-48 h-48 rounded-full object-cover shadow-lg">
                 </div>
             </div>
         </section>
@@ -255,7 +255,7 @@
     
     <footer class="bg-white mt-16">
         <div class="container mx-auto px-6 py-8 text-center text-gray-600">
-            <p>&copy; 2025 Dr. Sundar Raman Subramanian | Interactive Resume</p>
+            <p>&copy; 2025 Dr. Sundar Raman S | Interactive Resume</p>
         </div>
     </footer>
 
@@ -519,11 +519,14 @@
                 };
 
                 try {
+                    // Start of new logging and improved error handling
+                    console.log('Attempting to fetch API response...');
                     const response = await fetch(apiUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
+                    console.log('Fetch response received:', response);
                     
                     if (!response.ok) {
                         const contentType = response.headers.get("content-type");
@@ -542,12 +545,13 @@
                     if (generatedText) {
                         resultText.textContent = generatedText;
                         resultContainer.classList.remove('hidden');
+                        console.log('Successfully generated text.');
                     } else {
-                        throw new Error('API response was empty or malformed.');
+                        throw new Error('API response was empty or malformed. Please check the console for details.');
                     }
                 } catch (error) {
                     console.error('API call failed:', error);
-                    errorText.textContent = `Sorry, the request failed. Please check your internet connection or try a different topic. Error: ${error.message}`;
+                    errorText.textContent = `A network or API error occurred. Please check your internet connection or try again. Details in console: ${error.message}`;
                     errorContainer.classList.remove('hidden');
                 } finally {
                     buttonText.textContent = 'Generate Insight ✨';
