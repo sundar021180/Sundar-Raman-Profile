@@ -81,13 +81,35 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 90%;
+            width: 400px;
+            text-align: center;
+        }
     </style>
 </head>
 <body class="antialiased">
     <header id="header" class="bg-[#FDFBF6]/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
         <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
             <div class="text-2xl font-bold text-[#3C3C3C]">
-                Dr. Sundar Raman S
+                Dr. S. R. Subramanian
             </div>
             <div class="hidden md:flex space-x-8">
                 <a href="#overview" class="nav-link text-lg font-medium text-[#3C3C3C] hover:text-[#4E6E81]">Overview</a>
@@ -120,7 +142,7 @@
                     AI Transformation Executive with 20+ years of experience leveraging data, analytics, and AI to drive multi-million dollar business value. My expertise lies in architecting and deploying AI strategies that enhance operational efficiency, spur innovation, and deliver tangible ROI for global enterprises.
                 </p>
                 <div class="flex flex-wrap gap-4 text-lg">
-                    <a href="mailto:sundar021180@gmail.com" class="bg-[#4E6E81] text-white py-3 px-6 rounded-lg font-semibold hover:bg-[#3b5563] transition-colors">Contact Me</a>
+                    <button id="contactBtn" class="bg-[#4E6E81] text-white py-3 px-6 rounded-lg font-semibold hover:bg-[#3b5563] transition-colors">Contact Me</button>
                     <a href="https://www.linkedin.com/in/sundar-raman-s-14a044116" target="_blank" class="bg-transparent border-2 border-[#4E6E81] text-[#4E6E81] py-3 px-6 rounded-lg font-semibold hover:bg-[#EAD7C7] transition-colors">LinkedIn Profile</a>
                 </div>
             </div>
@@ -156,7 +178,7 @@
                 </div>
                 <div class="bg-white p-8 rounded-2xl shadow-lg text-center">
                     <div class="text-6xl font-bold text-[#4E6E81]">5-Year</div>
-                    <div class="text-xl font-semibold text-[#3C3C3C]">AI Roadmap Delivered</div>
+                    <div class="text-semibold text-[#3C3C3C]">AI Roadmap Delivered</div>
                     <p class="text-sm mt-2 text-gray-600">Defined and executed a long-term strategy for supply chain transformation at Kimberly-Clark, enhancing resilience and efficiency.</p>
                 </div>
             </div>
@@ -212,6 +234,18 @@
             </div>
         </section>
     </main>
+
+    <div id="contactModal" class="modal">
+        <div class="modal-content">
+            <h4 class="text-xl font-semibold mb-4">Contact Me</h4>
+            <p class="text-gray-700 mb-4">You can reach me at:</p>
+            <div class="bg-gray-100 p-3 rounded-lg flex items-center justify-between mb-4">
+                <span id="emailToCopy" class="text-[#3C3C3C] font-mono select-all">sundar021180@gmail.com</span>
+                <button id="copyEmailBtn" class="ml-4 text-sm text-[#4E6E81] hover:text-[#3b5563] font-medium">Copy</button>
+            </div>
+            <button id="closeModalBtn" class="bg-[#4E6E81] text-white py-2 px-4 rounded-lg font-semibold hover:bg-[#3b5563] transition-colors">Close</button>
+        </div>
+    </div>
     
     <footer class="bg-white mt-16">
         <div class="container mx-auto px-6 py-8 text-center text-gray-600">
@@ -223,6 +257,11 @@
         document.addEventListener('DOMContentLoaded', function() {
             const mobileMenuButton = document.getElementById('mobile-menu-button');
             const mobileMenu = document.getElementById('mobile-menu');
+            const contactBtn = document.getElementById('contactBtn');
+            const contactModal = document.getElementById('contactModal');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            const copyEmailBtn = document.getElementById('copyEmailBtn');
+            const emailToCopy = document.getElementById('emailToCopy');
 
             mobileMenuButton.addEventListener('click', () => {
                 mobileMenu.classList.toggle('hidden');
@@ -255,6 +294,31 @@
                         a.classList.add('active');
                     }
                 });
+            });
+
+            contactBtn.addEventListener('click', () => {
+                contactModal.style.display = 'flex';
+            });
+
+            closeModalBtn.addEventListener('click', () => {
+                contactModal.style.display = 'none';
+            });
+
+            copyEmailBtn.addEventListener('click', () => {
+                const range = document.createRange();
+                range.selectNode(emailToCopy);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                try {
+                    document.execCommand('copy');
+                    copyEmailBtn.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copyEmailBtn.textContent = 'Copy';
+                    }, 2000);
+                } catch (err) {
+                    console.error('Failed to copy text: ', err);
+                }
+                window.getSelection().removeAllRanges();
             });
 
             const timelineData = [
@@ -435,61 +499,56 @@
                 loadingSpinner.classList.remove('hidden');
                 generateBtn.disabled = true;
 
-                const userPrompt = `Generate a concise, single-paragraph summary on the topic "${topic}". The summary should sound like a professional thought leader in the field of AI and digital transformation, and be suitable for a professional resume or portfolio. Do not use an overly conversational tone or personal pronouns.`;
+                try {
+                    const userPrompt = `Generate a concise, single-paragraph summary on the topic "${topic}". The summary should sound like a professional thought leader in the field of AI and digital transformation, and be suitable for a professional resume or portfolio. Do not use an overly conversational tone or personal pronouns.`;
 
-                const systemPrompt = `You are a world-class thought leader in AI and digital transformation. Your task is to generate a concise, professional, single-paragraph summary for a user-provided topic.`;
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                let attempts = 0;
-                const maxAttempts = 5;
+                    const systemPrompt = `You are a world-class thought leader in AI and digital transformation. Your task is to generate a concise, professional, single-paragraph summary for a user-provided topic.`;
+                    const apiKey = "";
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
-                while (attempts < maxAttempts) {
-                    try {
-                        const payload = {
-                            contents: [{ parts: [{ text: userPrompt }] }],
-                            tools: [{ "google_search": {} }],
-                            systemInstruction: {
-                                parts: [{ text: systemPrompt }]
-                            }
-                        };
-
-                        const response = await fetch(apiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
+                    const payload = {
+                        contents: [{ parts: [{ text: userPrompt }] }],
+                        tools: [{ "google_search": {} }],
+                        systemInstruction: {
+                            parts: [{ text: systemPrompt }]
                         }
+                    };
 
-                        const result = await response.json();
-                        const candidate = result.candidates?.[0];
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
 
-                        if (candidate && candidate.content?.parts?.[0]?.text) {
-                            const text = candidate.content.parts[0].text;
-                            resultText.textContent = text;
-                            resultContainer.classList.remove('hidden');
-                            break;
-                        } else {
-                            throw new Error('API response was empty or malformed.');
-                        }
-                    } catch (error) {
-                        attempts++;
-                        const delay = Math.pow(2, attempts) * 1000;
-                        if (attempts < maxAttempts) {
-                            await new Promise(resolve => setTimeout(resolve, delay));
-                        } else {
-                            errorText.textContent = 'Failed to generate insight. Please try again.';
-                            errorContainer.classList.remove('hidden');
-                            break;
-                        }
+                    if (response.status === 401) {
+                        errorText.textContent = "Sorry, the request failed. Please check your API key and try again.";
+                        errorContainer.classList.remove('hidden');
+                        return; // Stop execution on 401 error
                     }
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error.message || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    const candidate = result.candidates?.[0];
+
+                    if (candidate && candidate.content?.parts?.[0]?.text) {
+                        const text = candidate.content.parts[0].text;
+                        resultText.textContent = text;
+                        resultContainer.classList.remove('hidden');
+                    } else {
+                        throw new Error('API response was empty or malformed.');
+                    }
+                } catch (error) {
+                    console.error('API call failed:', error);
+                    errorText.textContent = `Sorry, the request failed. Please check your internet connection or try a different topic. Error: ${error.message}`;
+                    errorContainer.classList.remove('hidden');
+                } finally {
+                    buttonText.textContent = 'Generate Insight ✨';
+                    loadingSpinner.classList.add('hidden');
+                    generateBtn.disabled = false;
                 }
-                
-                buttonText.textContent = 'Generate Insight ✨';
-                loadingSpinner.classList.add('hidden');
-                generateBtn.disabled = false;
             };
 
             generateBtn.addEventListener('click', generateInsight);
