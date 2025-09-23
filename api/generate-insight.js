@@ -1,51 +1,64 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import fetch from 'node-fetch';
 
-export default async function handler(request, response) {
-  try {
-    const { userPrompt, systemPrompt } = await request.json();
+export default async function handler(req, res) {
+    if (req.method !== 'POST') {
+        // Only allow POST requests to this function
+        return res.status(405).json({ error: 'Method Not Allowed' });
+    }
 
-    // The API key is stored securely as an environment variable, not in the code.
+    // Get the topic from the request body
+    const { topic } = req.body;
+
+    if (!topic) {
+        return res.status(400).json({ error: 'Topic is required in the request body.' });
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
-
     if (!apiKey) {
-      return response.status(500).json({ error: "API key is not configured." });
+        // For security, do not expose the API key to the client
+        console.error('GEMINI_API_KEY environment variable is not set.');
+        return res.status(500).json({ error: 'API key is missing.' });
     }
+    
+    // Construct the payload for the Gemini API call
+    const payload = {
+        contents: [{
+            parts: [{
+                text: `Generate a concise, single-paragraph summary on the topic "${topic}". The summary should sound like a professional thought leader in the field of AI and digital transformation, and be suitable for a professional resume or portfolio. Do not use an overly conversational tone or personal pronouns.`
+            }]
+        }],
+        systemInstruction: {
+            parts: [{
+                text: `You are a world-class thought leader in AI and digital transformation. Your task is to generate a concise, professional, single-paragraph summary for a user-provided topic.`
+            }]
+        },
+        tools: [{ "google_search": {} }],
+    };
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-preview-05-20" });
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
-    const result = await model.generateContent({
-      contents: [{ parts: [{ text: userPrompt }] }],
-      tools: [{ "google_search": {} }],
-      systemInstruction: {
-        parts: [{ text: systemPrompt }]
-      }
-    });
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-    const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || 'API request to Gemini failed.');
+        }
 
-    if (text) {
-      response.status(200).json({ text });
-    } else {
-      response.status(500).json({ error: "Failed to generate content." });
+        const result = await response.json();
+        const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (generatedText) {
+            return res.status(200).json({ text: generatedText });
+        } else {
+            return res.status(500).json({ error: 'API response was empty or malformed.' });
+        }
+    } catch (error) {
+        console.error('Serverless function failed:', error);
+        return res.status(500).json({ error: error.message || 'An unknown error occurred.' });
     }
-
-  } catch (error) {
-    console.error(error);
-    response.status(500).json({ error: error.message || "An unexpected error occurred." });
-  }
 }
-
-**3. Set Up Your Project on Vercel**
-1.  Go to [vercel.com](https://vercel.com) and create an account.
-2.  Click **"Add New"** and then **"Project."**
-3.  Choose your GitHub repository from the list.
-4.  In the project configuration, find the **Environment Variables** section.
-5.  Add a new variable:
-    * **Name:** `GEMINI_API_KEY`
-    * **Value:** Paste your Google AI Studio API key here.
-
-**4. Deploy!**
-Vercel will automatically detect the `api` folder and deploy your serverless function along with your `index.html` file. It will handle the entire process of making your website live and secure.
-
-This approach not only protects your API key but also follows a best practice for building modern web applications. Let me know if you have any questions about these steps!
