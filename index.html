@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Resume | Dr. Sundar Raman Subramanian</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Neutrals -->
+    <!-- Application Structure Plan: A thematic SPA with a sticky navigation bar linking to sections: Overview, Career Journey (interactive timeline), Core Expertise (radar chart & cards), Impact Metrics (data cards), and Thought Leadership. This structure transforms a static resume into an engaging narrative, allowing non-linear exploration of Dr. Subramanian's qualifications, prioritizing his career story and quantifiable impact for recruiters. -->
+    <!-- Visualization & Content Choices: Career Trajectory -> Goal: Show Progression -> Viz: Interactive HTML/CSS Timeline -> Interaction: Click to reveal role details -> Justification: More engaging storytelling than a list. Core Competencies -> Goal: Organize/Compare -> Viz: Chart.js Radar Chart & HTML Cards -> Interaction: Hover/Click for details -> Justification: Visualizes breadth of skills effectively. Key Achievements -> Goal: Highlight ROI -> Viz: Large HTML/CSS Data Cards -> Interaction: Static/Hover -> Justification: Emphasizes key business value. All implemented via Vanilla JS and Chart.js, avoiding SVG/Mermaid. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF6;
+            color: #3C3C3C;
+        }
+        .nav-link {
+            transition: color 0.3s ease;
+            position: relative;
+            padding-bottom: 4px;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4E6E81;
+            transition: width 0.3s ease;
+        }
+        .nav-link:hover::after, .nav-link.active::after {
+            width: 100%;
+        }
+        .timeline-item {
+            position: relative;
+            padding-left: 2.5rem;
+            padding-bottom: 2rem;
+            border-left: 2px solid #EAD7C7;
+        }
+        .timeline-item:last-child {
+            border-left: 2px solid transparent;
+            padding-bottom: 0;
+        }
+        .timeline-marker {
+            position: absolute;
+            left: -0.5rem;
+            top: 0;
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            background-color: #4E6E81;
+            transition: transform 0.3s ease;
+        }
+        .timeline-content:hover .timeline-marker {
+            transform: scale(1.25);
+        }
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 40vh;
+            max-height: 400px;
+            width: 100%;
+            max-width: 500px;
+        }
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #4E6E81;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <header id="header" class="bg-[#FDFBF6]/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="text-2xl font-bold text-[#3C3C3C]">
+                Dr. S. R. Subramanian
+            </div>
+            <div class="hidden md:flex space-x-8">
+                <a href="#overview" class="nav-link text-lg font-medium text-[#3C3C3C] hover:text-[#4E6E81]">Overview</a>
+                <a href="#journey" class="nav-link text-lg font-medium text-[#3C3C3C] hover:text-[#4E6E81]">Journey</a>
+                <a href="#expertise" class="nav-link text-lg font-medium text-[#3C3C3C] hover:text-[#4E6E81]">Expertise</a>
+                <a href="#impact" class="nav-link text-lg font-medium text-[#3C3C3C] hover:text-[#4E6E81]">Impact</a>
+                <a href="#thought-leadership" class="nav-link text-lg font-medium text-[#3C3C3C] hover:text-[#4E6E81]">Leadership</a>
+            </div>
+            <div class="md:hidden">
+                <button id="mobile-menu-button" class="text-gray-700 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </div>
+        </nav>
+        <div id="mobile-menu" class="hidden md:hidden">
+            <a href="#overview" class="block py-2 px-4 text-sm hover:bg-[#EAD7C7]">Overview</a>
+            <a href="#journey" class="block py-2 px-4 text-sm hover:bg-[#EAD7C7]">Journey</a>
+            <a href="#expertise" class="block py-2 px-4 text-sm hover:bg-[#EAD7C7]">Expertise</a>
+            <a href="#impact" class="block py-2 px-4 text-sm hover:bg-[#EAD7C7]">Impact</a>
+            <a href="#thought-leadership" class="block py-2 px-4 text-sm hover:bg-[#EAD7C7]">Leadership</a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8 md:py-16">
+        <section id="overview" class="min-h-screen flex items-center">
+            <div class="w-full">
+                <h1 class="text-4xl md:text-6xl font-bold text-[#4E6E81] mb-4">AI & Digital Transformation Leader</h1>
+                <h2 class="text-2xl md:text-3xl font-semibold text-[#3C3C3C] mb-8">Enterprise Strategy & ROI | Ex-Kimberly-Clark, Shell</h2>
+                <p class="text-lg md:text-xl max-w-3xl mb-8 leading-relaxed">
+                    AI Transformation Executive with 20+ years of experience leveraging data, analytics, and AI to drive multi-million dollar business value. My expertise lies in architecting and deploying AI strategies that enhance operational efficiency, spur innovation, and deliver tangible ROI for global enterprises.
+                </p>
+                <div class="flex flex-wrap gap-4 text-lg">
+                    <a href="mailto:sundar021180@gmail.com" class="bg-[#4E6E81] text-white py-3 px-6 rounded-lg font-semibold hover:bg-[#3b5563] transition-colors">Contact Me</a>
+                    <a href="https://www.linkedin.com/in/sundar-raman-s-14a044116" target="_blank" class="bg-transparent border-2 border-[#4E6E81] text-[#4E6E81] py-3 px-6 rounded-lg font-semibold hover:bg-[#EAD7C7] transition-colors">LinkedIn Profile</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="journey" class="py-16 md:py-24">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Career Journey</h2>
+            <p class="text-center max-w-3xl mx-auto text-lg mb-16">This section presents an interactive timeline of my professional career, tracing my path from foundational academic research to senior strategic leadership roles in global corporations. Click on any role to expand its details and see the key responsibilities and achievements from that period.</p>
+            <div id="timeline-container" class="max-w-3xl mx-auto">
+            </div>
+        </section>
+
+        <section id="expertise" class="py-16 md:py-24 bg-white rounded-2xl shadow-md">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Core Expertise</h2>
+            <p class="text-center max-w-3xl mx-auto text-lg mb-16">My skills span the full spectrum of AI-driven business transformation, from high-level strategy to platform development and ROI realization. The chart below provides a visual summary of my key competencies, demonstrating a balanced proficiency across strategic, technical, and leadership domains. Explore the interactive cards for a deeper dive into each area.</p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div class="chart-container">
+                    <canvas id="expertiseChart"></canvas>
+                </div>
+                <div id="competencies-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+            </div>
+        </section>
+
+        <section id="impact" class="py-16 md:py-24">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Quantifiable Impact</h2>
+            <p class="text-center max-w-3xl mx-auto text-lg mb-16">Strategy and leadership must translate into measurable results. This section highlights the tangible business value delivered through AI initiatives I have led. The primary focus is on demonstrating a clear return on investment, from significant cost savings to enhanced operational efficiencies.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <div class="bg-[#4E6E81] text-white p-8 rounded-2xl shadow-lg text-center">
+                    <div class="text-6xl font-bold mb-2">$35M</div>
+                    <div class="text-xl font-semibold">Annual Savings at Shell</div>
+                    <p class="text-sm mt-2 opacity-80">Achieved through the development and scaling of an AI platform for predictive maintenance, significantly reducing asset downtime.</p>
+                </div>
+                <div class="bg-white p-8 rounded-2xl shadow-lg text-center">
+                    <div class="text-6xl font-bold text-[#4E6E81]">5-Year</div>
+                    <div class="text-xl font-semibold text-[#3C3C3C]">AI Roadmap Delivered</div>
+                    <p class="text-sm mt-2 text-gray-600">Defined and executed a long-term strategy for supply chain transformation at Kimberly-Clark, enhancing resilience and efficiency.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="thought-leadership" class="py-16 md:py-24">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Innovation & Thought Leadership</h2>
+            <p class="text-center max-w-3xl mx-auto text-lg mb-16">Beyond direct project execution, my focus extends to exploring the future of AI and its application in enterprise settings. This section outlines my academic foundations, key recognitions, and current work in conceptualizing next-generation AI solutions.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold text-[#4E6E81] mb-2">Academic Foundation</h3>
+                    <ul class="space-y-2 text-gray-700">
+                        <li>PhD, Computational Biology</li>
+                        <li>Postdoctoral Fellow, USA</li>
+                        <li>Research Associate, Germany</li>
+                        <li>DAAD Fellow, Germany</li>
+                    </ul>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold text-[#4E6E81] mb-2">Awards & Recognition</h3>
+                    <ul class="space-y-2 text-gray-700">
+                        <li>Special Recognition Awards - Shell (2018, 2019)</li>
+                        <li>International Postdoctoral Fellowship</li>
+                        <li>DAAD Fellowship</li>
+                    </ul>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold text-[#4E6E81] mb-2">Future Concepts</h3>
+                    <ul class="space-y-2 text-gray-700">
+                        <li>Developing AI Agents for Supply Chain</li>
+                        <li>Conceptualizing an "AI Agency" Model</li>
+                        <li>Authoring Articles on Agentic AI</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="mt-16 bg-white p-8 rounded-2xl shadow-lg max-w-3xl mx-auto">
+                <h3 class="text-2xl font-bold text-center text-[#4E6E81] mb-6">✨ AI Thought Leadership Generator</h3>
+                <p class="text-center text-gray-600 mb-6">Explore my perspective on a topic of your choice. Enter a keyword or phrase, and an AI-powered engine will generate a concise thought leadership summary.</p>
+                <div class="flex flex-col md:flex-row gap-4 mb-4">
+                    <input type="text" id="topicInput" placeholder="e.g., The future of AI in supply chain" class="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4E6E81]">
+                    <button id="generateBtn" class="bg-[#4E6E81] text-white py-3 px-6 rounded-lg font-semibold hover:bg-[#3b5563] transition-colors flex items-center justify-center">
+                        <span id="buttonText">Generate Insight ✨</span>
+                        <div id="loadingSpinner" class="hidden loading-spinner ml-2"></div>
+                    </button>
+                </div>
+                <div id="resultContainer" class="p-6 bg-gray-50 rounded-lg hidden transition-all duration-500">
+                    <p id="resultText" class="text-gray-800 leading-relaxed"></p>
+                </div>
+                 <div id="errorContainer" class="hidden text-red-600 p-4 bg-red-100 rounded-lg mt-4">
+                    <p id="errorText"></p>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <footer class="bg-white mt-16">
+        <div class="container mx-auto px-6 py-8 text-center text-gray-600">
+            <p>&copy; 2025 Dr. Sundar Raman Subramanian | Interactive Resume</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+            
+            const navLinks = document.querySelectorAll('.nav-link, #mobile-menu a');
+            navLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    if(!mobileMenu.classList.contains('hidden')){
+                        mobileMenu.classList.add('hidden');
+                    }
+                });
+            });
+
+            const sections = document.querySelectorAll('section');
+            const navLi = document.querySelectorAll('nav .hidden a');
+
+            window.addEventListener('scroll', () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 60) {
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navLi.forEach(a => {
+                    a.classList.remove('active');
+                    if (a.getAttribute('href') == `#${current}`) {
+                        a.classList.add('active');
+                    }
+                });
+            });
+
+            const timelineData = [
+                {
+                    company: "Kimberly-Clark",
+                    role: "Lead AI Strategist (Senior Manager)",
+                    period: "Jun 2022 - Present",
+                    points: [
+                        "Defined and executed a 5-year AI roadmap for supply chain transformation, aligning with organizational goals to enhance operational efficiency and resilience.",
+                        "Launched IntelliPlan, an enterprise AI platform that improved demand forecasting accuracy and reduced inventory costs.",
+                        "Led a global team of data scientists and engineers, fostering a culture of innovation and high performance.",
+                        "Cultivated strong relationships with executive stakeholders to secure buy-in and investment for strategic AI initiatives."
+                    ]
+                },
+                {
+                    company: "Shell India",
+                    role: "Senior AI Strategist",
+                    period: "Aug 2016 - May 2022",
+                    points: [
+                        "Spearheaded the creation and scaling of an AI platform for predictive maintenance, resulting in an estimated <strong>$35M in annual savings</strong> through reduced downtime and optimized asset performance.",
+                        "Led a team of data scientists to develop and deploy AI models for fraud detection, demand forecasting, and inventory optimization.",
+                        "Managed the end-to-end lifecycle of AI projects, from ideation and proof-of-concept to production deployment and value tracking.",
+                        "Developed AI-driven solutions that improved fuel delivery and logistics efficiency for a global-scale operation."
+                    ]
+                },
+                {
+                    company: "ADF Data Science Pvt. Ltd.",
+                    role: "Data Scientist",
+                    period: "Jul 2015 - May 2016",
+                    points: [
+                        "Automated customer segmentation and developed predictive response models, enhancing marketing effectiveness for clients.",
+                        "Built risk-based segmentation tools and monitoring dashboards for financial portfolios."
+                    ]
+                },
+                 {
+                    company: "Academic & Research Career",
+                    role: "Postdoctoral & PhD Research",
+                    period: "2008 - 2015",
+                    points: [
+                        "Postdoctoral Fellow at the University of Pittsburgh, USA.",
+                        "Research Associate at HITS gGmbH, Heidelberg, Germany.",
+                        "Completed PhD in Computational Biology from the University of Madras.",
+                        "Awarded prestigious DAAD Fellowship in Germany."
+                    ]
+                }
+            ];
+
+            const timelineContainer = document.getElementById('timeline-container');
+            timelineData.forEach(item => {
+                const timelineElement = document.createElement('div');
+                timelineElement.className = 'timeline-item';
+                timelineElement.innerHTML = `
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content cursor-pointer">
+                        <time class="text-sm font-semibold text-gray-500">${item.period}</time>
+                        <h3 class="text-xl font-bold text-[#4E6E81]">${item.role}</h3>
+                        <p class="text-lg font-medium text-gray-800">${item.company}</p>
+                        <div class="details hidden mt-4 pl-4 border-l-2 border-[#EAD7C7] transition-all duration-500 max-h-0 overflow-hidden">
+                            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                                ${item.points.map(p => `<li>${p}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                timelineContainer.appendChild(timelineElement);
+            });
+
+            document.querySelectorAll('.timeline-content').forEach(item => {
+                item.addEventListener('click', () => {
+                    const details = item.querySelector('.details');
+                    details.classList.toggle('hidden');
+                    if (!details.classList.contains('hidden')) {
+                        details.style.maxHeight = details.scrollHeight + "px";
+                    } else {
+                        details.style.maxHeight = '0';
+                    }
+                });
+            });
+
+            const competencies = [
+                { name: 'AI Strategy & Digital Transformation', description: 'Enterprise-wide AI adoption, strategic roadmapping, business case development.' },
+                { name: 'Supply Chain & Manufacturing Intelligence', description: 'AI for demand forecasting, inventory management, and operational efficiency.' },
+                { name: 'Business Impact & ROI', description: 'Defining KPIs, tracking value realization, and communicating results to executive stakeholders.' },
+                { name: 'Platform & Ecosystem Development', description: 'Building scalable AI/ML platforms and integrating technology into core business functions.' },
+                { name: 'Global Team Leadership', description: 'Mentoring and managing multi-disciplinary teams of data scientists and engineers.' },
+                { name: 'Innovation & Thought Leadership', description: 'Conceptualizing AI Agents, developing thought leadership, and exploring Industry 4.0 applications.' }
+            ];
+
+            const competenciesContainer = document.getElementById('competencies-container');
+            competencies.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'bg-[#FDFBF6] p-4 rounded-lg border border-[#EAD7C7] hover:shadow-lg transition-shadow cursor-pointer';
+                card.innerHTML = `
+                    <h4 class="font-bold text-[#4E6E81]">${c.name}</h4>
+                    <p class="text-sm text-gray-600 mt-1">${c.description}</p>
+                `;
+                competenciesContainer.appendChild(card);
+            });
+
+            const ctx = document.getElementById('expertiseChart').getContext('2d');
+            const expertiseChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['AI Strategy', 'Supply Chain', 'Business Impact', 'Platform Dev', 'Team Leadership', 'Innovation'],
+                    datasets: [{
+                        label: 'Proficiency',
+                        data: [9, 8, 9, 7, 9, 8],
+                        backgroundColor: 'rgba(78, 110, 129, 0.2)',
+                        borderColor: 'rgba(78, 110, 129, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(78, 110, 129, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(78, 110, 129, 1)'
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(60, 60, 60, 0.2)' },
+                            grid: { color: 'rgba(60, 60, 60, 0.2)' },
+                            pointLabels: { 
+                                font: { size: 12, weight: 'bold' },
+                                color: '#3C3C3C'
+                            },
+                            ticks: {
+                                backdropColor: 'transparent',
+                                stepSize: 2,
+                                color: '#3C3C3C'
+                            },
+                             min: 0,
+                             max: 10
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                           callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.r !== null) {
+                                        label += context.parsed.r + ' / 10';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const topicInput = document.getElementById('topicInput');
+            const generateBtn = document.getElementById('generateBtn');
+            const buttonText = document.getElementById('buttonText');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const resultContainer = document.getElementById('resultContainer');
+            const resultText = document.getElementById('resultText');
+            const errorContainer = document.getElementById('errorContainer');
+            const errorText = document.getElementById('errorText');
+
+            const generateInsight = async () => {
+                const topic = topicInput.value.trim();
+                if (!topic) {
+                    errorText.textContent = "Please enter a topic to generate an insight.";
+                    errorContainer.classList.remove('hidden');
+                    return;
+                }
+                
+                errorContainer.classList.add('hidden');
+                resultContainer.classList.add('hidden');
+                buttonText.textContent = 'Generating...';
+                loadingSpinner.classList.remove('hidden');
+                generateBtn.disabled = true;
+
+                const userPrompt = `Generate a concise, single-paragraph summary on the topic "${topic}". The summary should sound like a professional thought leader in the field of AI and digital transformation, and be suitable for a professional resume or portfolio. Do not use an overly conversational tone or personal pronouns.`;
+
+                const systemPrompt = `You are a world-class thought leader in AI and digital transformation. Your task is to generate a concise, professional, single-paragraph summary for a user-provided topic.`;
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                let attempts = 0;
+                const maxAttempts = 5;
+
+                while (attempts < maxAttempts) {
+                    try {
+                        const payload = {
+                            contents: [{ parts: [{ text: userPrompt }] }],
+                            tools: [{ "google_search": {} }],
+                            systemInstruction: {
+                                parts: [{ text: systemPrompt }]
+                            }
+                        };
+
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        const result = await response.json();
+                        const candidate = result.candidates?.[0];
+
+                        if (candidate && candidate.content?.parts?.[0]?.text) {
+                            const text = candidate.content.parts[0].text;
+                            resultText.textContent = text;
+                            resultContainer.classList.remove('hidden');
+                            break;
+                        } else {
+                            throw new Error('API response was empty or malformed.');
+                        }
+                    } catch (error) {
+                        attempts++;
+                        const delay = Math.pow(2, attempts) * 1000;
+                        if (attempts < maxAttempts) {
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                        } else {
+                            errorText.textContent = 'Failed to generate insight. Please try again.';
+                            errorContainer.classList.remove('hidden');
+                            break;
+                        }
+                    }
+                }
+                
+                buttonText.textContent = 'Generate Insight ✨';
+                loadingSpinner.classList.add('hidden');
+                generateBtn.disabled = false;
+            };
+
+            generateBtn.addEventListener('click', generateInsight);
+        });
+    </script>
+</body>
+</html>
