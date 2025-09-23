@@ -516,8 +516,14 @@
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+                    let errorMsg = `HTTP error! Status: ${response.status}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.error?.message || errorData.error || errorMsg;
+                    } catch (jsonError) {
+                        errorMsg = response.statusText || errorMsg;
+                    }
+                    throw new Error(errorMsg);
                 }
 
                 const data = await response.json();
@@ -530,7 +536,7 @@
                 }
             } catch (error) {
                 console.error('API call failed:', error);
-                errorMessage.textContent = error.message || 'An unexpected error occurred.';
+                errorMessage.textContent = error.message || 'An unexpected network error occurred.';
                 errorContainer.classList.remove('hidden');
             } finally {
                 loadingIndicator.classList.add('hidden');
@@ -574,8 +580,14 @@
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+                    let errorMsg = `HTTP error! Status: ${response.status}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.error?.message || errorData.error || errorMsg;
+                    } catch (jsonError) {
+                        errorMsg = response.statusText || errorMsg;
+                    }
+                    throw new Error(errorMsg);
                 }
 
                 const data = await response.json();
@@ -588,7 +600,7 @@
                 }
             } catch (error) {
                 console.error('API call failed:', error);
-                errorMessage.textContent = error.message || 'An unexpected error occurred.';
+                errorMessage.textContent = error.message || 'An unexpected network error occurred.';
                 errorContainer.classList.remove('hidden');
             } finally {
                 loadingIndicator.classList.add('hidden');
