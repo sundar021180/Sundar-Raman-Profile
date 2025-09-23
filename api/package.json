@@ -1,0 +1,15 @@
+{
+  "name": "ai-thought-leadership-api",
+  "version": "1.0.0",
+  "description": "A serverless function to generate AI-powered insights.",
+  "main": "api/generate-insight.js",
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.13.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
