@@ -107,6 +107,7 @@
         <nav class="mt-4 sm:mt-0">
             <ul class="flex space-x-4">
                 <li><a href="#overview" class="hover:text-blue-300 transition">Overview</a></li>
+                <li><a href="#ai-generator" class="hover:text-blue-300 transition">AI Generator</a></li>
                 <li><a href="#experience" class="hover:text-blue-300 transition">Experience</a></li>
                 <li><a href="#skills" class="hover:text-blue-300 transition">Skills</a></li>
                 <li><a href="#contact" id="contactLink" class="hover:text-blue-300 transition">Contact</a></li>
@@ -118,7 +119,7 @@
         <!-- Overview -->
         <section id="overview" class="flex flex-col md:flex-row items-center md:items-start gap-8">
             <div class="w-48 h-48 flex-shrink-0 rounded-full overflow-hidden shadow-lg border-4 border-white-300">
-                <img src="profile-image.jpg" alt="A professional photo of Dr. Sundar Raman S" class="w-full h-full object-cover">
+                <img src="profile-image.jpg" onerror="this.src='https://placehold.co/192x192/e2e8f0/64748b?text=Photo'" alt="A professional photo of Dr. Sundar Raman S" class="w-full h-full object-cover">
             </div>
             <div class="text-center md:text-left">
                 <p class="text-gray-600 mb-4 text-justify">
@@ -128,6 +129,37 @@
                     <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full">Ex-Shell</span>
                     <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full">AI Strategy</span>
                     <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full">Digital Transformation</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- AI Thought Leadership Generator -->
+        <section id="ai-generator">
+            <h2 class="text-3xl font-bold section-title mb-8">✨ AI Thought Leadership Generator</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                <p class="text-gray-700 mb-4">
+                    As a leader in AI and digital transformation, I'm constantly exploring new ideas. Use this tool to generate a professional thought leadership insight on any AI or digital transformation topic.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <input type="text" id="topicInput" placeholder="e.g., The Future of AI in Supply Chain" class="flex-grow p-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" />
+                    <button id="generateBtn" class="bg-blue-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-blue-700 transition">
+                        Generate Insight
+                    </button>
+                </div>
+                <div id="loadingIndicator" class="mt-4 text-center text-gray-500 hidden">
+                    <svg class="animate-spin h-5 w-5 text-blue-500 inline-block mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Generating...
+                </div>
+                <div id="resultContainer" class="mt-6 p-4 bg-gray-100 rounded-lg hidden">
+                    <h4 class="font-semibold text-gray-800 mb-2">Generated Insight:</h4>
+                    <p id="insightText" class="text-gray-700 italic"></p>
+                </div>
+                <div id="errorContainer" class="mt-4 p-4 text-red-700 bg-red-100 rounded-lg hidden">
+                    <h4 class="font-semibold">An error occurred:</h4>
+                    <p id="errorMessage" class="mt-1"></p>
                 </div>
             </div>
         </section>
@@ -227,37 +259,6 @@
             </div>
         </section>
 
-        <!-- AI Thought Leadership Generator -->
-        <section id="ai-generator">
-            <h2 class="text-3xl font-bold section-title mb-8">✨ AI Thought Leadership Generator</h2>
-            <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-                <p class="text-gray-700 mb-4">
-                    As a leader in AI and digital transformation, I'm constantly exploring new ideas. Use this tool to generate a professional thought leadership insight on any AI or digital transformation topic.
-                </p>
-                <div class="flex flex-col sm:flex-row gap-4">
-                    <input type="text" id="topicInput" placeholder="e.g., The Future of AI in Supply Chain" class="flex-grow p-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" />
-                    <button id="generateBtn" class="bg-blue-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-blue-700 transition">
-                        Generate Insight
-                    </button>
-                </div>
-                <div id="loadingIndicator" class="mt-4 text-center text-gray-500 hidden">
-                    <svg class="animate-spin h-5 w-5 text-blue-500 inline-block mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Generating...
-                </div>
-                <div id="resultContainer" class="mt-6 p-4 bg-gray-100 rounded-lg hidden">
-                    <h4 class="font-semibold text-gray-800 mb-2">Generated Insight:</h4>
-                    <p id="insightText" class="text-gray-700 italic"></p>
-                </div>
-                <div id="errorContainer" class="mt-4 p-4 text-red-700 bg-red-100 rounded-lg hidden">
-                    <h4 class="font-semibold">An error occurred:</h4>
-                    <p id="errorMessage" class="mt-1"></p>
-                </div>
-            </div>
-        </section>
-
         <!-- Education & Awards -->
         <section class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
@@ -327,7 +328,17 @@
             tempInput.select();
             document.execCommand('copy');
             document.body.removeChild(tempInput);
-            alert("Email copied to clipboard!");
+            const copyMessage = document.createElement('div');
+            copyMessage.textContent = 'Email copied to clipboard!';
+            copyMessage.className = 'fixed bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-green-500 text-white rounded-md shadow-lg transition-opacity duration-300 opacity-0';
+            document.body.appendChild(copyMessage);
+            setTimeout(() => {
+                copyMessage.classList.remove('opacity-0');
+            }, 10);
+            setTimeout(() => {
+                copyMessage.classList.add('opacity-0');
+                setTimeout(() => document.body.removeChild(copyMessage), 300);
+            }, 2000);
         });
 
         const timelineItems = document.querySelectorAll('.timeline-item');
@@ -349,10 +360,11 @@
         generateBtn.addEventListener('click', async () => {
             const topic = topicInput.value.trim();
             if (!topic) {
-                alert('Please enter a topic.');
+                errorMessage.textContent = 'Please enter a topic.';
+                errorContainer.classList.remove('hidden');
                 return;
             }
-
+            
             loadingIndicator.classList.remove('hidden');
             resultContainer.classList.add('hidden');
             errorContainer.classList.add('hidden');
