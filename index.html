@@ -530,7 +530,7 @@
                 }
             } catch (error) {
                 console.error('API call failed:', error);
-                errorMessage.textContent = error.message;
+                errorMessage.textContent = error.message || 'An unexpected error occurred.';
                 errorContainer.classList.remove('hidden');
             } finally {
                 loadingIndicator.classList.add('hidden');
@@ -588,7 +588,7 @@
                 }
             } catch (error) {
                 console.error('API call failed:', error);
-                errorMessage.textContent = error.message;
+                errorMessage.textContent = error.message || 'An unexpected error occurred.';
                 errorContainer.classList.remove('hidden');
             } finally {
                 loadingIndicator.classList.add('hidden');
