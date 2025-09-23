@@ -135,15 +135,20 @@
 
     <main class="container mx-auto px-6 py-8 md:py-16">
         <section id="overview" class="min-h-screen flex items-center">
-            <div class="w-full">
-                <h1 class="text-4xl md:text-6xl font-bold text-[#4E6E81] mb-4">AI & Digital Transformation Leader</h1>
-                <h2 class="text-2xl md:text-3xl font-semibold text-[#3C3C3C] mb-8">Enterprise Strategy & ROI | Ex-Kimberly-Clark, Shell</h2>
-                <p class="text-lg md:text-xl max-w-3xl mb-8 leading-relaxed">
-                    AI Transformation Executive with 20+ years of experience leveraging data, analytics, and AI to drive multi-million dollar business value. My expertise lies in architecting and deploying AI strategies that enhance operational efficiency, spur innovation, and deliver tangible ROI for global enterprises.
-                </p>
-                <div class="flex flex-wrap gap-4 text-lg">
-                    <button id="contactBtn" class="bg-[#4E6E81] text-white py-3 px-6 rounded-lg font-semibold hover:bg-[#3b5563] transition-colors">Contact Me</button>
-                    <a href="https://www.linkedin.com/in/sundar-raman-s-14a044116" target="_blank" class="bg-transparent border-2 border-[#4E6E81] text-[#4E6E81] py-3 px-6 rounded-lg font-semibold hover:bg-[#EAD7C7] transition-colors">LinkedIn Profile</a>
+            <div class="w-full flex flex-col md:flex-row items-center justify-between">
+                <div class="mb-8 md:mb-0 md:mr-12">
+                    <h1 class="text-4xl md:text-6xl font-bold text-[#4E6E81] mb-4">AI & Digital Transformation Leader</h1>
+                    <h2 class="text-2xl md:text-3xl font-semibold text-[#3C3C3C] mb-8">Enterprise Strategy & ROI | Kimberly-Clark, Ex-Shell</h2>
+                    <p class="text-lg md:text-xl max-w-3xl mb-8 leading-relaxed">
+                        AI Transformation Executive with 20+ years of experience leveraging data, analytics, and AI to drive multi-million dollar business value. My expertise lies in architecting and deploying AI strategies that enhance operational efficiency, spur innovation, and deliver tangible ROI for global enterprises.
+                    </p>
+                    <div class="flex flex-wrap gap-4 text-lg">
+                        <button id="contactBtn" class="bg-[#4E6E81] text-white py-3 px-6 rounded-lg font-semibold hover:bg-[#3b5563] transition-colors">Contact Me</button>
+                        <a href="https://www.linkedin.com/in/sundar-raman-s-14a044116" target="_blank" class="bg-transparent border-2 border-[#4E6E81] text-[#4E6E81] py-3 px-6 rounded-lg font-semibold hover:bg-[#EAD7C7] transition-colors">LinkedIn Profile</a>
+                    </div>
+                </div>
+                <div class="shrink-0">
+                    <img src="https://placehold.co/200x200/EAD7C7/4E6E81?text=Photo" alt="Dr. Sundar Raman Subramanian" class="w-48 h-48 rounded-full object-cover shadow-lg">
                 </div>
             </div>
         </section>
@@ -499,18 +504,8 @@
                 loadingSpinner.classList.remove('hidden');
                 generateBtn.disabled = true;
 
-                // Use the API key provided by the canvas environment
                 const apiKey = typeof process.env.GEMINI_API_KEY !== 'undefined' ? process.env.GEMINI_API_KEY : '';
                 
-                if (!apiKey) {
-                    errorText.textContent = "API key is not available. This is a platform issue, please try again later.";
-                    errorContainer.classList.remove('hidden');
-                    buttonText.textContent = 'Generate Insight ✨';
-                    loadingSpinner.classList.add('hidden');
-                    generateBtn.disabled = false;
-                    return;
-                }
-
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
                 const systemPrompt = `You are a world-class thought leader in AI and digital transformation. Your task is to generate a concise, professional, single-paragraph summary for a user-provided topic.`;
@@ -522,59 +517,42 @@
                     tools: [{ "google_search": {} }],
                 };
 
-                const MAX_RETRIES = 3;
-                let retries = 0;
-                let lastError = null;
-                
-                while (retries < MAX_RETRIES) {
-                    try {
-                        const response = await fetch(apiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (!response.ok) {
-                             const contentType = response.headers.get("content-type");
-                             if (contentType && contentType.indexOf("application/json") !== -1) {
-                                 const errorData = await response.json();
-                                 throw new Error(errorData.error?.message || 'API request failed.');
-                             } else {
-                                 const errorText = await response.text();
-                                 throw new Error(errorText || 'API request failed with no message.');
-                             }
-                        }
-                        
-                        const result = await response.json();
-                        const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-                        
-                        if (generatedText) {
-                            resultText.textContent = generatedText;
-                            resultContainer.classList.remove('hidden');
-                            lastError = null; // Clear error on success
-                            break; // Exit the retry loop on success
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!response.ok) {
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.indexOf("application/json") !== -1) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error?.message || 'API request failed.');
                         } else {
-                            throw new Error('API response was empty or malformed.');
-                        }
-
-                    } catch (error) {
-                        lastError = error;
-                        retries++;
-                        if (retries < MAX_RETRIES) {
-                            await new Promise(res => setTimeout(res, Math.pow(2, retries) * 1000)); // Exponential backoff
+                            const errorText = await response.text();
+                            throw new Error(errorText || 'API request failed with no message.');
                         }
                     }
-                }
-                
-                if (lastError) {
-                    console.error('API call failed after retries:', lastError);
-                    errorText.textContent = `Sorry, the request failed. Please check your internet connection or try a different topic. Error: ${lastError.message}`;
+                    
+                    const result = await response.json();
+                    const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
+                    if (generatedText) {
+                        resultText.textContent = generatedText;
+                        resultContainer.classList.remove('hidden');
+                    } else {
+                        throw new Error('API response was empty or malformed.');
+                    }
+                } catch (error) {
+                    console.error('API call failed:', error);
+                    errorText.textContent = `Sorry, the request failed. Please check your internet connection or try a different topic. Error: ${error.message}`;
                     errorContainer.classList.remove('hidden');
+                } finally {
+                    buttonText.textContent = 'Generate Insight ✨';
+                    loadingSpinner.classList.add('hidden');
+                    generateBtn.disabled = false;
                 }
-
-                buttonText.textContent = 'Generate Insight ✨';
-                loadingSpinner.classList.add('hidden');
-                generateBtn.disabled = false;
             };
 
             generateBtn.addEventListener('click', generateInsight);
