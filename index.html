@@ -504,53 +504,31 @@
                 loadingSpinner.classList.remove('hidden');
                 generateBtn.disabled = true;
 
-                const apiKey = typeof process.env.GEMINI_API_KEY !== 'undefined' ? process.env.GEMINI_API_KEY : '';
-                
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
-                const systemPrompt = `You are a world-class thought leader in AI and digital transformation. Your task is to generate a concise, professional, single-paragraph summary for a user-provided topic.`;
-                const userQuery = `Generate a concise, single-paragraph summary on the topic "${topic}". The summary should sound like a professional thought leader in the field of AI and digital transformation, and be suitable for a professional resume or portfolio. Do not use an overly conversational tone or personal pronouns.`;
-
-                const payload = {
-                    contents: [{ parts: [{ text: userQuery }] }],
-                    systemInstruction: { parts: [{ text: systemPrompt }] },
-                    tools: [{ "google_search": {} }],
-                };
+                // **UPDATED** Call the new serverless function instead of the Gemini API directly
+                const apiUrl = `/api/generate-insight`;
 
                 try {
-                    // Start of new logging and improved error handling
-                    console.log('Attempting to fetch API response...');
                     const response = await fetch(apiUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify({ topic }) // Pass the topic in the request body
                     });
-                    console.log('Fetch response received:', response);
-                    
-                    if (!response.ok) {
-                        const contentType = response.headers.get("content-type");
-                        if (contentType && contentType.indexOf("application/json") !== -1) {
-                            const errorData = await response.json();
-                            throw new Error(errorData.error?.message || 'API request failed.');
-                        } else {
-                            const errorText = await response.text();
-                            throw new Error(errorText || 'API request failed with no message.');
-                        }
-                    }
                     
                     const result = await response.json();
-                    const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
                     
-                    if (generatedText) {
-                        resultText.textContent = generatedText;
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Serverless function failed.');
+                    }
+                    
+                    if (result.text) {
+                        resultText.textContent = result.text;
                         resultContainer.classList.remove('hidden');
-                        console.log('Successfully generated text.');
                     } else {
-                        throw new Error('API response was empty or malformed. Please check the console for details.');
+                        throw new Error('API response was empty or malformed.');
                     }
                 } catch (error) {
                     console.error('API call failed:', error);
-                    errorText.textContent = `A network or API error occurred. Please check your internet connection or try again. Details in console: ${error.message}`;
+                    errorText.textContent = `An error occurred: ${error.message}`;
                     errorContainer.classList.remove('hidden');
                 } finally {
                     buttonText.textContent = 'Generate Insight ✨';
