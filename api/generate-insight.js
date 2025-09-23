@@ -1,53 +1,76 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+/**
+ * Vercel Serverless Function to securely generate AI insights.
+ * This function acts as a proxy, protecting the API key from the client-side.
+ * It reads the GEMINI_API_KEY from Vercel's environment variables.
+ */
 
-export default async function (req, res) {
-  // Check for the API key first
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    console.error("GEMINI_API_KEY environment variable is not set.");
-    return res.status(500).json({ error: "API key is not configured. Please set GEMINI_API_KEY on Vercel." });
-  }
+// Define the API endpoint and model.
+const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
 
-  // Check if the request method is POST
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
-  }
+module.exports = async (req, res) => {
+    // Set headers for CORS policy to allow requests from the main page.
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  const { topic, context } = req.body;
-
-  if (!topic) {
-    return res.status(400).json({ error: 'Topic is required.' });
-  }
-
-  try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    let prompt;
-    if (context) {
-        // If context is provided, generate an insight based on it.
-        prompt = `Based on the following content, act as a world-class AI and Digital Transformation leader and provide a 2-3 sentence insight on the topic "${topic}". The insight should summarize a key takeaway from the content provided.
-
-Content: "${context}"
-`;
-    } else {
-        // If no context, use the original prompt for a general insight.
-        prompt = `Based on a resume for a senior AI strategist, write a 2-3 sentence thought leadership insight on the topic: "${topic}". The response should be professional, concise, and demonstrate strategic foresight.`;
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        res.status(204).end();
+        return;
     }
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    // Check if the text is empty
-    if (!text) {
-        throw new Error("Gemini API returned an empty response.");
+    // Ensure the request method is POST.
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: "Method Not Allowed" });
     }
 
-    res.status(200).json({ text });
-  } catch (error) {
-    // Log the full error to the Vercel dashboard for debugging
-    console.error("Error generating content:", error);
-    res.status(500).json({ error: `An internal server error occurred. Check Vercel logs for details.`, message: error.message });
-  }
-}
+    // Get the API key from the environment variables.
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+    // Check if the API key is present.
+    if (!GEMINI_API_KEY) {
+        return res.status(500).json({ error: "API key is not configured." });
+    }
+
+    try {
+        // Parse the request body to get the prompt and context.
+        const { prompt } = req.body;
+
+        if (!prompt) {
+            return res.status(400).json({ error: "Prompt is required in the request body." });
+        }
+
+        // Prepare the payload for the Gemini API call.
+        const payload = {
+            contents: [{
+                parts: [{
+                    text: prompt
+                }]
+            }],
+            tools: [{ "google_search": {} }],
+        };
+
+        // Make the POST request to the Gemini API.
+        const apiResponse = await fetch(`${API_URL}?key=${GEMINI_API_KEY}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        });
+
+        // Handle API errors.
+        if (!apiResponse.ok) {
+            const errorText = await apiResponse.text();
+            throw new Error(`API call failed with status ${apiResponse.status}: ${errorText}`);
+        }
+
+        // Send the JSON response back to the client.
+        const data = await apiResponse.json();
+        res.status(200).json(data);
+
+    } catch (error) {
+        console.error('API call error:', error);
+        res.status(500).json({ error: "Failed to generate insight.", details: error.message });
+    }
+};
