@@ -499,49 +499,72 @@
                 loadingSpinner.classList.remove('hidden');
                 generateBtn.disabled = true;
 
-                try {
-                    const payload = {
-                        userPrompt: `Generate a concise, single-paragraph summary on the topic "${topic}". The summary should sound like a professional thought leader in the field of AI and digital transformation, and be suitable for a professional resume or portfolio. Do not use an overly conversational tone or personal pronouns.`,
-                        systemPrompt: `You are a world-class thought leader in AI and digital transformation. Your task is to generate a concise, professional, single-paragraph summary for a user-provided topic.`,
-                    };
+                // --- API Call to Gemini directly from the browser ---
+                const apiKey = ""; // Canvas provides this at runtime
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
-                    // We are now calling a secure backend endpoint instead of the Gemini API directly.
-                    // This endpoint will contain your API key, keeping it private.
-                    const response = await fetch('/api/generate-insight', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
+                const systemPrompt = `You are a world-class thought leader in AI and digital transformation. Your task is to generate a concise, professional, single-paragraph summary for a user-provided topic.`;
+                const userQuery = `Generate a concise, single-paragraph summary on the topic "${topic}". The summary should sound like a professional thought leader in the field of AI and digital transformation, and be suitable for a professional resume or portfolio. Do not use an overly conversational tone or personal pronouns.`;
 
-                    if (!response.ok) {
-                        const contentType = response.headers.get("content-type");
-                        let errorMessage = `HTTP error! Status: ${response.status}`;
-                        if (contentType && contentType.indexOf("application/json") !== -1) {
-                            const errorData = await response.json();
-                            errorMessage = errorData.error || errorMessage;
-                        } else {
-                            const errorText = await response.text();
-                            errorMessage = errorText || errorMessage;
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    tools: [{ "google_search": {} }],
+                };
+
+                const MAX_RETRIES = 3;
+                let retries = 0;
+                let lastError = null;
+                
+                while (retries < MAX_RETRIES) {
+                    try {
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                             const contentType = response.headers.get("content-type");
+                             if (contentType && contentType.indexOf("application/json") !== -1) {
+                                 const errorData = await response.json();
+                                 throw new Error(errorData.error?.message || 'API request failed.');
+                             } else {
+                                 const errorText = await response.text();
+                                 throw new Error(errorText || 'API request failed with no message.');
+                             }
                         }
-                        throw new Error(errorMessage);
-                    }
+                        
+                        const result = await response.json();
+                        const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                        
+                        if (generatedText) {
+                            resultText.textContent = generatedText;
+                            resultContainer.classList.remove('hidden');
+                            lastError = null; // Clear error on success
+                            break; // Exit the retry loop on success
+                        } else {
+                            throw new Error('API response was empty or malformed.');
+                        }
 
-                    const result = await response.json();
-                    if (result.text) {
-                        resultText.textContent = result.text;
-                        resultContainer.classList.remove('hidden');
-                    } else {
-                        throw new Error('API response was empty or malformed.');
+                    } catch (error) {
+                        lastError = error;
+                        retries++;
+                        if (retries < MAX_RETRIES) {
+                            await new Promise(res => setTimeout(res, Math.pow(2, retries) * 1000)); // Exponential backoff
+                        }
                     }
-                } catch (error) {
-                    console.error('API call failed:', error);
-                    errorText.textContent = `Sorry, the request failed. Please check your internet connection or try a different topic. Error: ${error.message}`;
-                    errorContainer.classList.remove('hidden');
-                } finally {
-                    buttonText.textContent = 'Generate Insight ✨';
-                    loadingSpinner.classList.add('hidden');
-                    generateBtn.disabled = false;
                 }
+                
+                if (lastError) {
+                    console.error('API call failed after retries:', lastError);
+                    errorText.textContent = `Sorry, the request failed. Please check your internet connection or try a different topic. Error: ${lastError.message}`;
+                    errorContainer.classList.remove('hidden');
+                }
+
+                buttonText.textContent = 'Generate Insight ✨';
+                loadingSpinner.classList.add('hidden');
+                generateBtn.disabled = false;
             };
 
             generateBtn.addEventListener('click', generateInsight);
