@@ -108,10 +108,12 @@
             <p class="text-blue-300">AI & Digital Transformation Leader</p>
         </div>
         <nav class="mt-4 sm:mt-0">
-            <ul class="flex space-x-4">
+            <ul class="flex flex-wrap justify-center sm:flex-nowrap sm:justify-start space-x-4">
                 <li><a href="#overview" class="hover:text-blue-300 transition">Overview</a></li>
                 <li><a href="#ai-generator" class="hover:text-blue-300 transition">AI Generator</a></li>
                 <li><a href="#experience" class="hover:text-blue-300 transition">Experience</a></li>
+                <li><a href="#publications" class="hover:text-blue-300 transition">Publications</a></li>
+                <li><a href="#portfolio" class="hover:text-blue-300 transition">Portfolio</a></li>
                 <li><a href="#skills" class="hover:text-blue-300 transition">Skills</a></li>
                 <li><a href="#contact" id="contactLink" class="hover:text-blue-300 transition">Contact</a></li>
             </ul>
@@ -229,6 +231,65 @@
                             <li>Built risk-based segmentation tools and monitoring dashboards for financial portfolios.</li>
                         </ul>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Academic Publications -->
+        <section id="publications">
+            <h2 class="text-3xl font-bold section-title mb-8">Academic Publications</h2>
+            <div class="space-y-6 text-gray-700">
+                <div class="bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                    <h4 class="font-bold text-blue-700">Computational Estimation of Microsecond to Second Atomistic Folding Times</h4>
+                    <p class="text-sm italic mb-2">Published in *Journal of the American Chemical Society*, 2019</p>
+                    <p>A research paper on developing computational methods for simulating and analyzing protein-ligand binding, which has implications for drug discovery.</p>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                    <h4 class="font-bold text-blue-700">Middle-way flexible docking: Pose prediction using mixed-resolution Monte Carlo in estrogen receptor $\alpha$</h4>
+                    <p class="text-sm italic mb-2">Published in *PloS one*, 2019</p>
+                    <p>A publication focused on using a combined resolution approach with Monte Carlo simulations to predict the poses of molecules binding to estrogen receptors, a key step in computational drug design.</p>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                    <h4 class="font-bold text-blue-700">Role of length-dependent stability of collagen-like peptides</h4>
+                    <p class="text-sm italic mb-2">Published in *The Journal of Physical Chemistry B*, 2008</p>
+                    <p>An early career research paper using molecular dynamics to investigate the stability of collagen-like peptides based on their length, highlighting foundational work in molecular simulation.</p>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                    <h4 class="font-bold text-blue-700">Exploring the changes in the structure of $\alpha$-helical peptides adsorbed onto a single walled carbon nanotube using classical molecular dynamics simulation</h4>
+                    <p class="text-sm italic mb-2">Published in *The Journal of Physical Chemistry B*, 2010</p>
+                    <p>A research article detailing the use of classical molecular dynamics to analyze how the structure of $\alpha$-helical peptides changes when they interact with carbon nanotubes, a topic with applications in bionanotechnology.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Project Portfolio -->
+        <section id="portfolio">
+            <h2 class="text-3xl font-bold section-title mb-8">Project Portfolio</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                    <h3 class="font-bold text-lg mb-2">AI-Powered Production Rate Prediction</h3>
+                    <p class="text-gray-700 text-sm mb-4">Developed a machine learning model to predict the production rate of critical assets, enabling proactive adjustments and improving overall output.</p>
+                    <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">View Project &rarr;</a>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                    <h3 class="font-bold text-lg mb-2">Unburnt Fuel Prediction Inside Furnace Chambers</h3>
+                    <p class="text-gray-700 text-sm mb-4">A predictive model that identifies conditions leading to unburnt fuel in furnaces, preventing safety incidents and optimizing fuel efficiency.</p>
+                    <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">View Project &rarr;</a>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                    <h3 class="font-bold text-lg mb-2">Corrosion Prediction using Drone Images</h3>
+                    <p class="text-gray-700 text-sm mb-4">Utilized computer vision and machine learning to analyze drone imagery, automatically detecting and predicting corrosion on industrial equipment.</p>
+                    <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">View Project &rarr;</a>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                    <h3 class="font-bold text-lg mb-2">Service Level Prediction Platform</h3>
+                    <p class="text-gray-700 text-sm mb-4">Developed an AI platform that forecasts service level performance to help with capacity planning and ensuring customer satisfaction.</p>
+                    <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">View Project &rarr;</a>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                    <h3 class="font-bold text-lg mb-2">Fraud Detection API</h3>
+                    <p class="text-gray-700 text-sm mb-4">A microservice API that uses a combination of supervised and unsupervised learning to identify and flag fraudulent transactions in a large financial dataset.</p>
+                    <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">View Project &rarr;</a>
                 </div>
             </div>
         </section>
@@ -387,12 +448,23 @@
             errorContainer.classList.add('hidden');
 
             try {
-                const response = await fetch('/api/generate-insight', {
+                const payload = {
+                    contents: [{
+                        parts: [{
+                            text: `Act as a world-class AI and Digital Transformation leader and generate a one-paragraph thought leadership insight on the following topic: ${topic}.`
+                        }]
+                    }],
+                    tools: [{ "google_search": {} }],
+                };
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ topic }),
+                    body: JSON.stringify(payload)
                 });
 
                 if (!response.ok) {
@@ -401,8 +473,13 @@
                 }
 
                 const data = await response.json();
-                insightText.textContent = data.text;
-                resultContainer.classList.remove('hidden');
+                const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (text) {
+                    insightText.textContent = text;
+                    resultContainer.classList.remove('hidden');
+                } else {
+                    throw new Error('No content generated.');
+                }
             } catch (error) {
                 console.error('API call failed:', error);
                 errorMessage.textContent = error.message;
