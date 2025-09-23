@@ -19,12 +19,15 @@
             position: relative;
             padding-left: 35px;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
             border-left: 2px solid #6366f1;
         }
         .timeline-item:hover {
             transform: translateY(-3px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .timeline-item.active {
+            background-color: #f3f4f6;
         }
         .timeline-item::before {
             content: '';
@@ -155,7 +158,15 @@
                 </div>
                 <div id="resultContainer" class="mt-6 p-4 bg-gray-100 rounded-lg hidden">
                     <h4 class="font-semibold text-gray-800 mb-2">Generated Insight:</h4>
-                    <p id="insightText" class="text-gray-700 italic"></p>
+                    <div class="relative group">
+                        <p id="insightText" class="text-gray-700 italic pr-12"></p>
+                        <button id="copyInsightBtn" class="absolute top-0 right-0 p-2 text-gray-500 hover:text-gray-700 transition-colors hidden group-hover:block">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M8 2a2 2 0 00-2 2v10a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H8zm0 12h6V4H8v10z" />
+                                <path fill-rule="evenodd" d="M3 6a2 2 0 012-2h1V2h-1a4 4 0 00-4 4v10a4 4 0 004 4h10a4 4 0 004-4v-1h-2v1a2 2 0 01-2 2H3a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <div id="errorContainer" class="mt-4 p-4 text-red-700 bg-red-100 rounded-lg hidden">
                     <h4 class="font-semibold">An error occurred:</h4>
@@ -284,14 +295,17 @@
     <footer class="bg-gray-800 text-white text-center p-6 text-sm">
         <p>Connect with me:</p>
         <div class="mt-2 space-x-4">
-            <a href="https://www.google.com/search?q=linkedin.com/in/sundar-raman-s-14a044116" target="_blank" class="hover:text-blue-300 transition">LinkedIn</a>
+            <a href="https://www.linkedin.com/in/sundar-raman-s-14a044116" target="_blank" class="hover:text-blue-300 transition">LinkedIn</a>
             <a href="#" id="footerContactLink" class="hover:text-blue-300 transition">Email</a>
         </div>
     </footer>
 </div>
 
 <script>
+    // Javascript for the interactive resume functionality
     document.addEventListener('DOMContentLoaded', () => {
+
+        /* --- Contact Modal Functionality --- */
         const messageBox = document.getElementById('messageBox');
         const closeMessageBox = document.getElementById('closeMessageBox');
         const contactLink = document.getElementById('contactLink');
@@ -341,6 +355,7 @@
             }, 2000);
         });
 
+        /* --- Interactive Timeline Functionality --- */
         const timelineItems = document.querySelectorAll('.timeline-item');
         timelineItems.forEach(item => {
             item.addEventListener('click', () => {
@@ -349,6 +364,7 @@
             });
         });
 
+        /* --- AI Generator Functionality --- */
         const generateBtn = document.getElementById('generateBtn');
         const topicInput = document.getElementById('topicInput');
         const loadingIndicator = document.getElementById('loadingIndicator');
@@ -356,6 +372,7 @@
         const insightText = document.getElementById('insightText');
         const errorContainer = document.getElementById('errorContainer');
         const errorMessage = document.getElementById('errorMessage');
+        const copyInsightBtn = document.getElementById('copyInsightBtn');
 
         generateBtn.addEventListener('click', async () => {
             const topic = topicInput.value.trim();
@@ -393,6 +410,28 @@
             } finally {
                 loadingIndicator.classList.add('hidden');
             }
+        });
+
+        // Copy button for the generated insight
+        copyInsightBtn.addEventListener('click', () => {
+            const text = insightText.textContent;
+            const tempInput = document.createElement('textarea');
+            document.body.appendChild(tempInput);
+            tempInput.value = text;
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            const copyMessage = document.createElement('div');
+            copyMessage.textContent = 'Insight copied!';
+            copyMessage.className = 'fixed bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-green-500 text-white rounded-md shadow-lg transition-opacity duration-300 opacity-0';
+            document.body.appendChild(copyMessage);
+            setTimeout(() => {
+                copyMessage.classList.remove('opacity-0');
+            }, 10);
+            setTimeout(() => {
+                copyMessage.classList.add('opacity-0');
+                setTimeout(() => document.body.removeChild(copyMessage), 300);
+            }, 2000);
         });
     });
 </script>
