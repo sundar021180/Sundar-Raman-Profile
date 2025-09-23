@@ -500,7 +500,7 @@
                 generateBtn.disabled = true;
 
                 // Use the API key provided by the canvas environment
-                const apiKey = typeof __gemini_api_key !== 'undefined' ? __gemini_api_key : '';
+                const apiKey = typeof process.env.GEMINI_API_KEY !== 'undefined' ? process.env.GEMINI_API_KEY : '';
                 
                 if (!apiKey) {
                     errorText.textContent = "API key is not available. This is a platform issue, please try again later.";
