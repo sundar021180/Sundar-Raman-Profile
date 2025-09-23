@@ -137,7 +137,7 @@
         <section id="overview" class="min-h-screen flex items-center">
             <div class="w-full">
                 <h1 class="text-4xl md:text-6xl font-bold text-[#4E6E81] mb-4">AI & Digital Transformation Leader</h1>
-                <h2 class="text-2xl md:text-3xl font-semibold text-[#3C3C3C] mb-8">Enterprise Strategy & ROI | Kimberly-Clark | Ex- Shell</h2>
+                <h2 class="text-2xl md:text-3xl font-semibold text-[#3C3C3C] mb-8">Enterprise Strategy & ROI | Ex-Kimberly-Clark, Shell</h2>
                 <p class="text-lg md:text-xl max-w-3xl mb-8 leading-relaxed">
                     AI Transformation Executive with 20+ years of experience leveraging data, analytics, and AI to drive multi-million dollar business value. My expertise lies in architecting and deploying AI strategies that enhance operational efficiency, spur innovation, and deliver tangible ROI for global enterprises.
                 </p>
@@ -500,42 +500,27 @@
                 generateBtn.disabled = true;
 
                 try {
-                    const userPrompt = `Generate a concise, single-paragraph summary on the topic "${topic}". The summary should sound like a professional thought leader in the field of AI and digital transformation, and be suitable for a professional resume or portfolio. Do not use an overly conversational tone or personal pronouns.`;
-
-                    const systemPrompt = `You are a world-class thought leader in AI and digital transformation. Your task is to generate a concise, professional, single-paragraph summary for a user-provided topic.`;
-                    const apiKey = "";
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
                     const payload = {
-                        contents: [{ parts: [{ text: userPrompt }] }],
-                        tools: [{ "google_search": {} }],
-                        systemInstruction: {
-                            parts: [{ text: systemPrompt }]
-                        }
+                        userPrompt: `Generate a concise, single-paragraph summary on the topic "${topic}". The summary should sound like a professional thought leader in the field of AI and digital transformation, and be suitable for a professional resume or portfolio. Do not use an overly conversational tone or personal pronouns.`,
+                        systemPrompt: `You are a world-class thought leader in AI and digital transformation. Your task is to generate a concise, professional, single-paragraph summary for a user-provided topic.`,
                     };
 
-                    const response = await fetch(apiUrl, {
+                    // We are now calling a secure backend endpoint instead of the Gemini API directly.
+                    // This endpoint will contain your API key, keeping it private.
+                    const response = await fetch('/api/generate-insight', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
 
-                    if (response.status === 401) {
-                        errorText.textContent = "Sorry, the request failed. Please check your API key and try again.";
-                        errorContainer.classList.remove('hidden');
-                        return; // Stop execution on 401 error
-                    }
                     if (!response.ok) {
                         const errorData = await response.json();
-                        throw new Error(errorData.error.message || `HTTP error! status: ${response.status}`);
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
                     }
 
                     const result = await response.json();
-                    const candidate = result.candidates?.[0];
-
-                    if (candidate && candidate.content?.parts?.[0]?.text) {
-                        const text = candidate.content.parts[0].text;
-                        resultText.textContent = text;
+                    if (result.text) {
+                        resultText.textContent = result.text;
                         resultContainer.classList.remove('hidden');
                     } else {
                         throw new Error('API response was empty or malformed.');
