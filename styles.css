@@ -65,17 +65,6 @@ body {
     margin-bottom: 16px;
 }
 
-.section-title::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    width: 50px;
-    height: 3px;
-    background-color: #6366f1;
-    border-radius: 2px;
-}
-
 #messageBox {
     z-index: 1000;
 }
