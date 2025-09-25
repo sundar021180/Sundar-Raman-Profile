@@ -128,6 +128,7 @@ test('allows requests when ALLOWED_ORIGINS is missing outside production', async
     delete process.env.NODE_ENV;
     delete process.env.VERCEL_ENV;
     process.env.GEMINI_API_KEY = 'test-key';
+    process.env.GENERATE_INSIGHT_ACCESS_TOKENS = VALID_TOKEN;
 
     const expectedPayload = { data: 'ok' };
 
@@ -150,6 +151,35 @@ test('allows requests when ALLOWED_ORIGINS is missing outside production', async
 
     assert.deepEqual(res.statusCalls, [200]);
     assert.equal(res.getHeader('Access-Control-Allow-Origin'), '*');
+    assert.deepEqual(res.body, expectedPayload);
+});
+
+test('allows requests without access tokens outside production', async () => {
+    delete process.env.GENERATE_INSIGHT_ACCESS_TOKENS;
+    delete process.env.NODE_ENV;
+    delete process.env.VERCEL_ENV;
+    process.env.GEMINI_API_KEY = 'key';
+
+    const expectedPayload = { ok: true };
+
+    global.fetch = async () => ({
+        ok: true,
+        json: async () => expectedPayload
+    });
+
+    const req = {
+        method: 'POST',
+        headers: {
+            origin: 'https://allowed.example',
+            'content-type': 'application/json'
+        },
+        body: { prompt: 'Hello' }
+    };
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    assert.deepEqual(res.statusCalls, [200]);
     assert.deepEqual(res.body, expectedPayload);
 });
 

@@ -288,18 +288,26 @@ module.exports = async (req, res) => {
     }
 
     const accessTokens = parseAccessTokens();
-    if (accessTokens.size === 0) {
+    const inProduction = isProductionEnvironment();
+    const shouldEnforceAccessToken = accessTokens.size > 0;
+
+    if (inProduction && !shouldEnforceAccessToken) {
         console.error('GENERATOR access tokens missing.');
         return res.status(500).json({ error: "Access token configuration is missing on the server." });
     }
 
-    const rawAccessToken = getAccessTokenFromHeader(req);
-    if (!rawAccessToken || !accessTokens.has(rawAccessToken)) {
-        console.info('Rejected request due to missing or invalid access token.');
-        return res.status(401).json({ error: "A valid access token is required." });
-    }
+    let hashedToken;
+    if (shouldEnforceAccessToken) {
+        const rawAccessToken = getAccessTokenFromHeader(req);
+        if (!rawAccessToken || !accessTokens.has(rawAccessToken)) {
+            console.info('Rejected request due to missing or invalid access token.');
+            return res.status(401).json({ error: "A valid access token is required." });
+        }
 
-    const hashedToken = hashToken(rawAccessToken);
+        hashedToken = hashToken(rawAccessToken);
+    } else {
+        console.info('Access tokens are not configured; skipping enforcement outside production.');
+    }
 
     // Get the API key from the environment variables.
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
