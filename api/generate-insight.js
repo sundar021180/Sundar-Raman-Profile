@@ -166,10 +166,32 @@ const parseAllowedOrigins = () => {
     return new Set(['*']);
 };
 
+const ACCESS_TOKEN_ENV_KEYS = [
+    'GENERATE_INSIGHT_ACCESS_TOKENS',
+    'GENERATE_INSIGHT_ACCESS_TOKEN',
+    'INSIGHT_GENERATOR_ACCESS_TOKENS',
+    'INSIGHT_GENERATOR_ACCESS_TOKEN'
+];
+
 const parseTokenList = (tokens) => {
     if (typeof tokens === 'string') {
-        return tokens
-            .split(',')
+        const trimmed = tokens.trim();
+        if (!trimmed) {
+            return [];
+        }
+
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                return parseTokenList(parsed);
+            } catch (error) {
+                console.warn('Failed to parse token list from JSON string.', error);
+                return [];
+            }
+        }
+
+        return trimmed
+            .split(/[\n,]/)
             .map((token) => token.trim())
             .filter(Boolean);
     }
@@ -184,8 +206,15 @@ const parseTokenList = (tokens) => {
 };
 
 const loadAccessTokensFromEnv = () => {
-    const tokens = parseTokenList(process.env.GENERATE_INSIGHT_ACCESS_TOKENS);
-    return new Set(tokens);
+    for (const key of ACCESS_TOKEN_ENV_KEYS) {
+        const rawValue = process.env[key];
+        const parsed = parseTokenList(rawValue);
+        if (parsed.length > 0) {
+            return new Set(parsed);
+        }
+    }
+
+    return new Set();
 };
 
 const loadAccessTokensFromFile = () => {

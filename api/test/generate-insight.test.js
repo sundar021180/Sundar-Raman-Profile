@@ -411,6 +411,81 @@ test('loads access tokens from configured file when environment variable is abse
     assert.deepEqual(res.body, expectedPayload);
 });
 
+test('supports alternative environment variable names for access tokens', async () => {
+    delete process.env.GENERATE_INSIGHT_ACCESS_TOKENS;
+    delete process.env.GENERATE_INSIGHT_ACCESS_TOKEN;
+    process.env.INSIGHT_GENERATOR_ACCESS_TOKEN = VALID_TOKEN;
+    delete process.env.INSIGHT_GENERATOR_ACCESS_TOKENS;
+    process.env.GEMINI_API_KEY = 'key';
+
+    const expectedPayload = { data: 'alias-token' };
+
+    global.fetch = async () => ({
+        ok: true,
+        json: async () => expectedPayload
+    });
+
+    const req = {
+        method: 'POST',
+        headers: {
+            origin: 'https://allowed.example',
+            'content-type': 'application/json',
+            authorization: `Bearer ${VALID_TOKEN}`
+        },
+        body: { prompt: 'Hello' }
+    };
+
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    assert.deepEqual(res.statusCalls, [200]);
+    assert.deepEqual(res.body, expectedPayload);
+});
+
+test('parses newline and JSON formatted token lists from environment variables', async () => {
+    const newlineToken = 'newline-token';
+    process.env.GENERATE_INSIGHT_ACCESS_TOKENS = `other-token\n${newlineToken}`;
+    process.env.GEMINI_API_KEY = 'key';
+
+    const expectedPayload = { data: 'newline-token' };
+
+    global.fetch = async () => ({
+        ok: true,
+        json: async () => expectedPayload
+    });
+
+    const req = {
+        method: 'POST',
+        headers: {
+            origin: 'https://allowed.example',
+            'content-type': 'application/json',
+            authorization: `Bearer ${newlineToken}`
+        },
+        body: { prompt: 'Hello' }
+    };
+
+    const resNewline = createMockResponse();
+    await handler(req, resNewline);
+    assert.deepEqual(resNewline.statusCalls, [200]);
+
+    process.env.GENERATE_INSIGHT_ACCESS_TOKENS = JSON.stringify(['json-token', 'second']);
+
+    const jsonReq = {
+        method: 'POST',
+        headers: {
+            origin: 'https://allowed.example',
+            'content-type': 'application/json',
+            authorization: 'Bearer json-token'
+        },
+        body: { prompt: 'Hello' }
+    };
+
+    const resJson = createMockResponse();
+    await handler(jsonReq, resJson);
+    assert.deepEqual(resJson.statusCalls, [200]);
+});
+
 test('rejects requests with an invalid access token', async () => {
     process.env.GEMINI_API_KEY = 'key';
 
