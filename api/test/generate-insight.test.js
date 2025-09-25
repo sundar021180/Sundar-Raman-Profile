@@ -234,7 +234,10 @@ test('returns 500 when GEMINI_API_KEY is missing', async () => {
     await handler(req, res);
 
     assert.deepEqual(res.statusCalls, [500]);
-    assert.deepEqual(res.jsonPayloads[0], { error: 'API key is not configured.' });
+    assert.deepEqual(res.jsonPayloads[0], {
+        error: 'Gemini API key is not configured. Set GEMINI_API_KEY with your Gemini key only.',
+        docs: 'https://ai.google.dev/gemini-api/docs/api-key'
+    });
 });
 
 test('rejects non-POST methods', async () => {

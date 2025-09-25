@@ -314,7 +314,10 @@ module.exports = async (req, res) => {
 
     // Check if the API key is present.
     if (!GEMINI_API_KEY) {
-        return res.status(500).json({ error: "API key is not configured." });
+        return res.status(500).json({
+            error: "Gemini API key is not configured. Set GEMINI_API_KEY with your Gemini key only.",
+            docs: "https://ai.google.dev/gemini-api/docs/api-key"
+        });
     }
 
     // Ensure the request method is POST.
