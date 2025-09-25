@@ -142,6 +142,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMessage = document.getElementById('errorMessage');
     const copyInsightBtn = document.getElementById('copyInsightBtn');
 
+    const projectLoadingIndicator = document.getElementById('projectLoadingIndicator');
+    const projectInsightContainer = document.getElementById('projectInsightContainer');
+    const projectInsightText = document.getElementById('projectInsightText');
+    const projectInsightTitle = document.getElementById('projectInsightTitle');
+    const projectErrorContainer = document.getElementById('projectErrorContainer');
+    const projectErrorMessage = document.getElementById('projectErrorMessage');
+
     const publications = [
         { id: 'pub1', title: 'Computational Estimation of Microsecond to Second Atomistic Folding Times', description: 'A research paper on developing computational methods for simulating and analyzing protein-ligand binding, which has implications for drug discovery.' },
         { id: 'pub2', title: 'Middle-way flexible docking', description: 'A publication focused on using a combined resolution approach with Monte Carlo simulations to predict the poses of molecules binding to estrogen receptors, a key step in computational drug design.' },
@@ -178,10 +185,27 @@ document.addEventListener('DOMContentLoaded', () => {
     contextSelect.appendChild(optgroupPub);
     contextSelect.appendChild(optgroupProj);
 
-    const generateInsight = async (prompt) => {
-        loadingIndicator.classList.remove('hidden');
-        resultContainer.classList.add('hidden');
-        errorContainer.classList.add('hidden');
+    const generateInsight = async (prompt, elements = {}) => {
+        const {
+            loadingElement = loadingIndicator,
+            resultElement = resultContainer,
+            errorElement = errorContainer,
+            textElement = insightText,
+            errorMessageElement = errorMessage,
+            onSuccess
+        } = elements;
+
+        if (loadingElement) {
+            loadingElement.classList.remove('hidden');
+        }
+
+        if (resultElement) {
+            resultElement.classList.add('hidden');
+        }
+
+        if (errorElement) {
+            errorElement.classList.add('hidden');
+        }
 
         try {
             const response = await fetch('/api/generate-insight', {
@@ -199,17 +223,33 @@ document.addEventListener('DOMContentLoaded', () => {
             const insight = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
             if (insight) {
-                insightText.textContent = insight;
-                resultContainer.classList.remove('hidden');
+                if (textElement) {
+                    textElement.textContent = insight;
+                }
+
+                if (typeof onSuccess === 'function') {
+                    onSuccess(insight);
+                }
+
+                if (resultElement) {
+                    resultElement.classList.remove('hidden');
+                }
             } else {
                 throw new Error('No insight generated. Please try again.');
             }
         } catch (error) {
             console.error('Failed to generate insight:', error);
-            errorMessage.textContent = error.message;
-            errorContainer.classList.remove('hidden');
+            if (errorMessageElement) {
+                errorMessageElement.textContent = error.message;
+            }
+
+            if (errorElement) {
+                errorElement.classList.remove('hidden');
+            }
         } finally {
-            loadingIndicator.classList.add('hidden');
+            if (loadingElement) {
+                loadingElement.classList.add('hidden');
+            }
         }
     };
 
@@ -250,8 +290,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const projectItem = event.currentTarget.closest('.project-item');
             if (!projectItem) {
-                errorMessage.textContent = 'Unable to identify the selected project. Please try again.';
-                errorContainer.classList.remove('hidden');
+                if (projectErrorMessage) {
+                    projectErrorMessage.textContent = 'Unable to identify the selected project. Please try again.';
+                }
+
+                if (projectErrorContainer) {
+                    projectErrorContainer.classList.remove('hidden');
+                }
                 return;
             }
 
@@ -262,13 +307,33 @@ document.addEventListener('DOMContentLoaded', () => {
             const description = descriptionElement?.getAttribute('data-description')?.trim() || descriptionElement?.textContent?.trim();
 
             if (!title && !description) {
-                errorMessage.textContent = 'No details were found for the selected project. Please try another project.';
-                errorContainer.classList.remove('hidden');
+                if (projectErrorMessage) {
+                    projectErrorMessage.textContent = 'No details were found for the selected project. Please try another project.';
+                }
+
+                if (projectErrorContainer) {
+                    projectErrorContainer.classList.remove('hidden');
+                }
                 return;
             }
 
             const prompt = generateProjectPrompt(title, description);
-            generateInsight(prompt);
+            if (projectInsightTitle) {
+                projectInsightTitle.textContent = title ? `Project Insight: ${title}` : 'Project Insight';
+            }
+
+            generateInsight(prompt, {
+                loadingElement: projectLoadingIndicator,
+                resultElement: projectInsightContainer,
+                errorElement: projectErrorContainer,
+                textElement: projectInsightText,
+                errorMessageElement: projectErrorMessage,
+                onSuccess: () => {
+                    if (projectInsightContainer) {
+                        projectInsightContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            });
         });
     });
 
