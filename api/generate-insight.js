@@ -129,25 +129,15 @@ const resetRateLimiter = () => {
     rateLimitBuckets.clear();
 };
 
-const normalizeEnvironmentValue = (value) => {
-    if (typeof value !== 'string') {
-        return '';
-    }
-
-    return value.trim().toLowerCase();
-};
-
 const isProductionEnvironment = () => {
     const { VERCEL_ENV, NODE_ENV } = process.env;
 
-    const normalizedVercelEnv = normalizeEnvironmentValue(VERCEL_ENV);
-    if (normalizedVercelEnv) {
-        return normalizedVercelEnv === 'production';
+    if (typeof VERCEL_ENV === 'string' && VERCEL_ENV.length > 0) {
+        return VERCEL_ENV === 'production';
     }
 
-    const normalizedNodeEnv = normalizeEnvironmentValue(NODE_ENV);
-    if (normalizedNodeEnv) {
-        return normalizedNodeEnv === 'production';
+    if (typeof NODE_ENV === 'string' && NODE_ENV.length > 0) {
+        return NODE_ENV === 'production';
     }
 
     return false;
@@ -288,36 +278,25 @@ module.exports = async (req, res) => {
     }
 
     const accessTokens = parseAccessTokens();
-    const inProduction = isProductionEnvironment();
-    const shouldEnforceAccessToken = accessTokens.size > 0;
-
-    if (inProduction && !shouldEnforceAccessToken) {
+    if (accessTokens.size === 0) {
         console.error('GENERATOR access tokens missing.');
         return res.status(500).json({ error: "Access token configuration is missing on the server." });
     }
 
-    let hashedToken;
-    if (shouldEnforceAccessToken) {
-        const rawAccessToken = getAccessTokenFromHeader(req);
-        if (!rawAccessToken || !accessTokens.has(rawAccessToken)) {
-            console.info('Rejected request due to missing or invalid access token.');
-            return res.status(401).json({ error: "A valid access token is required." });
-        }
-
-        hashedToken = hashToken(rawAccessToken);
-    } else {
-        console.info('Access tokens are not configured; skipping enforcement outside production.');
+    const rawAccessToken = getAccessTokenFromHeader(req);
+    if (!rawAccessToken || !accessTokens.has(rawAccessToken)) {
+        console.info('Rejected request due to missing or invalid access token.');
+        return res.status(401).json({ error: "A valid access token is required." });
     }
+
+    const hashedToken = hashToken(rawAccessToken);
 
     // Get the API key from the environment variables.
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
     // Check if the API key is present.
     if (!GEMINI_API_KEY) {
-        return res.status(500).json({
-            error: "Gemini API key is not configured. Set GEMINI_API_KEY with your Gemini key only.",
-            docs: "https://ai.google.dev/gemini-api/docs/api-key"
-        });
+        return res.status(500).json({ error: "API key is not configured." });
     }
 
     // Ensure the request method is POST.
