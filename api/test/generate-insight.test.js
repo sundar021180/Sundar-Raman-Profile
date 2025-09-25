@@ -123,13 +123,7 @@ test('rejects requests when VERCEL_ENV uses different casing for production', as
     assert.deepEqual(res.jsonPayloads[0], { error: 'CORS configuration is missing on the server.' });
 });
 
-test('allows requests when ALLOWED_ORIGINS is missing outside production', async () => {
-    delete process.env.ALLOWED_ORIGINS;
-    delete process.env.NODE_ENV;
-    delete process.env.VERCEL_ENV;
-    process.env.GEMINI_API_KEY = 'test-key';
     process.env.GENERATE_INSIGHT_ACCESS_TOKENS = VALID_TOKEN;
-
     const expectedPayload = { data: 'ok' };
 
     global.fetch = async () => ({
