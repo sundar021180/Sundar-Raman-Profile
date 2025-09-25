@@ -90,17 +90,23 @@ module.exports = async (req, res) => {
     const requestOrigin = req.headers.origin;
 
     if (allowedOrigins.size === 0) {
-        console.warn('No ALLOWED_ORIGINS configured; refusing request.');
-        res.status(500).json({ error: "Server misconfiguration." });
-        return;
+        if (requestOrigin) {
+            console.warn('No ALLOWED_ORIGINS configured. Falling back to request origin.');
+            allowedOrigins.add(requestOrigin);
+        } else {
+            console.warn('No ALLOWED_ORIGINS configured and no request origin provided. Allowing all origins.');
+            allowedOrigins.add('*');
+        }
     }
 
-    if (requestOrigin && !allowedOrigins.has(requestOrigin)) {
+    if (requestOrigin && !allowedOrigins.has(requestOrigin) && !allowedOrigins.has('*')) {
         res.status(403).json({ error: "Origin not allowed." });
         return;
     }
 
-    if (requestOrigin) {
+    if (allowedOrigins.has('*')) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    } else if (requestOrigin) {
         res.setHeader('Access-Control-Allow-Origin', requestOrigin);
     }
     res.setHeader('Vary', 'Origin');
