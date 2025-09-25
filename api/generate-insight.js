@@ -6,6 +6,8 @@
 
 // Define the API endpoint and model.
 const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
 
@@ -164,18 +166,69 @@ const parseAllowedOrigins = () => {
     return new Set(['*']);
 };
 
-const parseAccessTokens = () => {
-    const { GENERATE_INSIGHT_ACCESS_TOKENS } = process.env;
-    if (!GENERATE_INSIGHT_ACCESS_TOKENS) {
-        return new Set();
-    }
-
-    return new Set(
-        GENERATE_INSIGHT_ACCESS_TOKENS
+const parseTokenList = (tokens) => {
+    if (typeof tokens === 'string') {
+        return tokens
             .split(',')
             .map((token) => token.trim())
-            .filter(Boolean)
-    );
+            .filter(Boolean);
+    }
+
+    if (Array.isArray(tokens)) {
+        return tokens
+            .map((token) => (typeof token === 'string' ? token.trim() : ''))
+            .filter(Boolean);
+    }
+
+    return [];
+};
+
+const loadAccessTokensFromEnv = () => {
+    const tokens = parseTokenList(process.env.GENERATE_INSIGHT_ACCESS_TOKENS);
+    return new Set(tokens);
+};
+
+const loadAccessTokensFromFile = () => {
+    const configuredPath = process.env.GENERATE_INSIGHT_ACCESS_TOKENS_FILE;
+    const defaultPath = path.join(__dirname, 'access-tokens.json');
+    const filePath = configuredPath || defaultPath;
+
+    try {
+        const fileContents = fs.readFileSync(filePath, 'utf8');
+        if (!fileContents) {
+            return new Set();
+        }
+
+        let parsed;
+        try {
+            parsed = JSON.parse(fileContents);
+        } catch (parseError) {
+            console.warn('Failed to parse access token file as JSON.', parseError);
+            return new Set();
+        }
+
+        const tokens = Array.isArray(parsed) ? parsed : parseTokenList(parsed?.tokens);
+        return new Set(tokens);
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            console.warn('Unable to read access token file.', error);
+        }
+        return new Set();
+    }
+};
+
+const parseAccessTokens = () => {
+    const envTokens = loadAccessTokensFromEnv();
+    if (envTokens.size > 0) {
+        return envTokens;
+    }
+
+    const fileTokens = loadAccessTokensFromFile();
+    if (fileTokens.size > 0) {
+        return fileTokens;
+    }
+
+    return new Set();
 };
 
 const fetchWithTimeout = async (url, options, timeoutMs) => {
