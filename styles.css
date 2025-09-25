@@ -1,0 +1,128 @@
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f3f4f6;
+    color: #1f2937;
+}
+
+.container {
+    max-width: 900px;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 35px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+    border-left: 2px solid #6366f1;
+}
+
+.timeline-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.timeline-item.active {
+    background-color: #f3f4f6;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    background-color: #6366f1;
+    border-radius: 50%;
+    border: 3px solid #fff;
+}
+
+.timeline-card {
+    display: none;
+    margin-top: 10px;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.timeline-item.active .timeline-card {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.section-title {
+    position: relative;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+}
+
+.section-title::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 50px;
+    height: 3px;
+    background-color: #6366f1;
+    border-radius: 2px;
+}
+
+#messageBox {
+    z-index: 1000;
+}
+
+.collapsible-header {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+    transition: background-color 0.2s;
+}
+
+.collapsible-header:hover {
+    background-color: #f3f4f6;
+}
+
+.collapsible-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out;
+    padding: 0 1.5rem;
+}
+
+.collapsible-content.expanded {
+    max-height: 500px;
+    padding-top: 1.5rem;
+}
+
+.toggle-icon {
+    transition: transform 0.3s;
+}
+
+.toggle-icon.rotated {
+    transform: rotate(45deg);
+}
+
+@media (max-width: 640px) {
+    .flex-col-mobile {
+        flex-direction: column;
+    }
+
+    .gap-y-4-mobile {
+        gap: 1rem;
+    }
+}
