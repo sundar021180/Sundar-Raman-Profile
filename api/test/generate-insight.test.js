@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 
 const handler = require('../generate-insight');
+const exampleTokens = require('../access-tokens.example.json');
 
 const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent';
 
@@ -47,6 +48,11 @@ const VALID_TOKEN = 'valid-token';
 const authorize = (headers = {}) => ({
     ...headers,
     authorization: `Bearer ${VALID_TOKEN}`
+});
+
+const authorizeWithToken = (token, headers = {}) => ({
+    ...headers,
+    authorization: `Bearer ${token}`
 });
 
 beforeEach(() => {
@@ -429,6 +435,63 @@ test('rejects requests with an invalid access token', async () => {
 
     assert.deepEqual(res.statusCalls, [401]);
     assert.deepEqual(res.jsonPayloads[0], { error: 'A valid access token is required.' });
+});
+
+test('falls back to example access tokens outside production', async () => {
+    delete process.env.GENERATE_INSIGHT_ACCESS_TOKENS;
+    delete process.env.GENERATE_INSIGHT_ACCESS_TOKENS_FILE;
+    delete process.env.NODE_ENV;
+    delete process.env.VERCEL_ENV;
+    process.env.GEMINI_API_KEY = 'key';
+
+    const exampleToken = exampleTokens.tokens?.[0];
+    assert.ok(exampleToken, 'Example configuration should define at least one token');
+
+    const expectedPayload = { data: 'ok' };
+
+    global.fetch = async () => ({
+        ok: true,
+        json: async () => expectedPayload
+    });
+
+    const req = {
+        method: 'POST',
+        headers: authorizeWithToken(exampleToken, {
+            origin: 'https://allowed.example',
+            'content-type': 'application/json'
+        }),
+        body: { prompt: 'Hello' }
+    };
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    assert.deepEqual(res.statusCalls, [200]);
+    assert.deepEqual(res.jsonPayloads[0], expectedPayload);
+});
+
+test('does not use example access tokens when production is detected', async () => {
+    delete process.env.GENERATE_INSIGHT_ACCESS_TOKENS;
+    delete process.env.GENERATE_INSIGHT_ACCESS_TOKENS_FILE;
+    process.env.VERCEL_ENV = 'production';
+    process.env.GEMINI_API_KEY = 'key';
+
+    const exampleToken = exampleTokens.tokens?.[0] || 'local-development-token';
+
+    const req = {
+        method: 'POST',
+        headers: authorizeWithToken(exampleToken, {
+            origin: 'https://allowed.example',
+            'content-type': 'application/json'
+        }),
+        body: { prompt: 'Hello' }
+    };
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    assert.deepEqual(res.statusCalls, [500]);
+    assert.deepEqual(res.jsonPayloads[0], { error: 'Access token configuration is missing on the server.' });
 });
 
 test('retries Gemini calls on transient failures', async () => {

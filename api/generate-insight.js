@@ -188,11 +188,7 @@ const loadAccessTokensFromEnv = () => {
     return new Set(tokens);
 };
 
-const loadAccessTokensFromFile = () => {
-    const configuredPath = process.env.GENERATE_INSIGHT_ACCESS_TOKENS_FILE;
-    const defaultPath = path.join(__dirname, 'access-tokens.json');
-    const filePath = configuredPath || defaultPath;
-
+const loadAccessTokensFromJsonFile = (filePath, { logOnMissing = true } = {}) => {
     try {
         const fileContents = fs.readFileSync(filePath, 'utf8');
         if (!fileContents) {
@@ -210,11 +206,28 @@ const loadAccessTokensFromFile = () => {
         const tokens = Array.isArray(parsed) ? parsed : parseTokenList(parsed?.tokens);
         return new Set(tokens);
     } catch (error) {
-        if (error.code !== 'ENOENT') {
+        if (error.code === 'ENOENT') {
+            if (logOnMissing) {
+                console.warn('Access token file not found at', filePath);
+            }
+        } else {
             console.warn('Unable to read access token file.', error);
         }
         return new Set();
     }
+};
+
+const loadAccessTokensFromFile = () => {
+    const configuredPath = process.env.GENERATE_INSIGHT_ACCESS_TOKENS_FILE;
+    const defaultPath = path.join(__dirname, 'access-tokens.json');
+    const filePath = configuredPath || defaultPath;
+
+    return loadAccessTokensFromJsonFile(filePath);
+};
+
+const loadAccessTokensFromExampleFile = () => {
+    const examplePath = path.join(__dirname, 'access-tokens.example.json');
+    return loadAccessTokensFromJsonFile(examplePath, { logOnMissing: false });
 };
 
 const parseAccessTokens = () => {
@@ -226,6 +239,14 @@ const parseAccessTokens = () => {
     const fileTokens = loadAccessTokensFromFile();
     if (fileTokens.size > 0) {
         return fileTokens;
+    }
+
+    if (!isProductionEnvironment()) {
+        const exampleTokens = loadAccessTokensFromExampleFile();
+        if (exampleTokens.size > 0) {
+            console.warn('Falling back to development access tokens from the example configuration.');
+            return exampleTokens;
+        }
     }
 
     return new Set();
