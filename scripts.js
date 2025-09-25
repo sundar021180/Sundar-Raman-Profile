@@ -82,6 +82,53 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    /* --- Section toggles for portfolio and publications --- */
+    const sectionToggles = document.querySelectorAll('.section-toggle');
+
+    sectionToggles.forEach(button => {
+        const targetId = button.getAttribute('data-target');
+        const target = document.getElementById(targetId);
+
+        if (!target) {
+            return;
+        }
+
+        const label = button.getAttribute('data-label') || 'section';
+        const expandIcon = button.querySelector('.icon-expand');
+        const collapseIcon = button.querySelector('.icon-collapse');
+        const labelSpan = button.querySelector('.section-toggle-label');
+
+        const updateButtonState = () => {
+            const isHidden = target.classList.contains('hidden');
+            const expanded = !isHidden;
+            const action = expanded ? 'Collapse' : 'Expand';
+            const accessibleLabel = `${action} ${label}`;
+
+            button.setAttribute('aria-expanded', expanded);
+            button.setAttribute('aria-label', accessibleLabel);
+            button.setAttribute('title', accessibleLabel);
+
+            if (labelSpan) {
+                labelSpan.textContent = accessibleLabel;
+            }
+
+            if (expandIcon) {
+                expandIcon.classList.toggle('hidden', expanded);
+            }
+
+            if (collapseIcon) {
+                collapseIcon.classList.toggle('hidden', !expanded);
+            }
+        };
+
+        updateButtonState();
+
+        button.addEventListener('click', () => {
+            target.classList.toggle('hidden');
+            updateButtonState();
+        });
+    });
+
     /* --- AI Generator Functionality --- */
     const generateBtn = document.getElementById('generateBtn');
     const generateContextBtn = document.getElementById('generateContextBtn');

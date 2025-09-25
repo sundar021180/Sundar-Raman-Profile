@@ -276,8 +276,26 @@
 
         <!-- Project Portfolio -->
         <section id="portfolio">
-            <h2 class="text-3xl font-bold section-title mb-8">Project Portfolio</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="flex items-center justify-between gap-4">
+                <h2 class="text-3xl font-bold section-title">Project Portfolio</h2>
+                <button
+                    type="button"
+                    class="section-toggle p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    data-target="portfolioContent"
+                    data-label="project portfolio"
+                    aria-expanded="false"
+                    aria-controls="portfolioContent"
+                >
+                    <span class="sr-only section-toggle-label">Expand project portfolio</span>
+                    <svg class="icon-expand h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <svg class="icon-collapse h-6 w-6 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                    </svg>
+                </button>
+            </div>
+            <div id="portfolioContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 hidden">
                 <div class="project-item bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
                     <h3 class="font-bold text-lg mb-2" data-title="AI-Powered Production Rate Prediction">AI-Powered Production Rate Prediction</h3>
                     <p class="project-description text-gray-700 text-sm mb-4" data-description="Developed a machine learning model to predict the production rate of critical assets, enabling proactive adjustments and improving overall output.">Developed a machine learning model to predict the production rate of critical assets, enabling proactive adjustments and improving overall output.</p>
@@ -308,9 +326,27 @@
 
         <!-- Academic Publications -->
         <section id="publications">
-            <h2 class="text-3xl font-bold section-title mb-8">Academic Publications <span class="text-sm font-normal text-gray-500">(22+ publications)</span></h2>
-            <div class="space-y-6 text-gray-700">
-                <p class="text-gray-600 italic mb-4">A selection of my most notable publications is listed below. For a complete list, please contact me.</p>
+            <div class="flex items-center justify-between gap-4">
+                <h2 class="text-3xl font-bold section-title">Academic Publications <span class="text-sm font-normal text-gray-500">(22+ publications)</span></h2>
+                <button
+                    type="button"
+                    class="section-toggle p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    data-target="publicationsContent"
+                    data-label="academic publications"
+                    aria-expanded="false"
+                    aria-controls="publicationsContent"
+                >
+                    <span class="sr-only section-toggle-label">Expand academic publications</span>
+                    <svg class="icon-expand h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <svg class="icon-collapse h-6 w-6 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                    </svg>
+                </button>
+            </div>
+            <div id="publicationsContent" class="space-y-6 text-gray-700 mt-6 hidden">
+                <p class="text-gray-600 italic">A selection of my most notable publications is listed below. For a complete list, please contact me.</p>
                 <div class="publication-item bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                     <h4 class="font-bold text-blue-700" data-title="Computational Estimation of Microsecond to Second Atomistic Folding Times">Computational Estimation of Microsecond to Second Atomistic Folding Times</h4>
                     <p class="text-sm italic mb-2">Published in *Journal of the American Chemical Society*, 2019</p>
