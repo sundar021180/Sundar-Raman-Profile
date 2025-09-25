@@ -129,18 +129,47 @@ const resetRateLimiter = () => {
     rateLimitBuckets.clear();
 };
 
-const parseAllowedOrigins = () => {
-    const { ALLOWED_ORIGINS } = process.env;
-    if (!ALLOWED_ORIGINS) {
-        return new Set();
+const normalizeEnvironmentValue = (value) => {
+    if (typeof value !== 'string') {
+        return '';
     }
 
-    return new Set(
-        ALLOWED_ORIGINS
-            .split(",")
-            .map((origin) => origin.trim())
-            .filter(Boolean)
-    );
+    return value.trim().toLowerCase();
+};
+
+const isProductionEnvironment = () => {
+    const { VERCEL_ENV, NODE_ENV } = process.env;
+
+    const normalizedVercelEnv = normalizeEnvironmentValue(VERCEL_ENV);
+    if (normalizedVercelEnv) {
+        return normalizedVercelEnv === 'production';
+    }
+
+    const normalizedNodeEnv = normalizeEnvironmentValue(NODE_ENV);
+    if (normalizedNodeEnv) {
+        return normalizedNodeEnv === 'production';
+    }
+
+    return false;
+};
+
+const parseAllowedOrigins = () => {
+    const { ALLOWED_ORIGINS } = process.env;
+
+    if (typeof ALLOWED_ORIGINS === 'string' && ALLOWED_ORIGINS.trim().length > 0) {
+        return new Set(
+            ALLOWED_ORIGINS
+                .split(",")
+                .map((origin) => origin.trim())
+                .filter(Boolean)
+        );
+    }
+
+    if (!isProductionEnvironment()) {
+        return new Set(['*']);
+    }
+
+    return new Set();
 };
 
 const parseAccessTokens = () => {
