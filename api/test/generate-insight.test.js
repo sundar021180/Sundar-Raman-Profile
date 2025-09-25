@@ -42,6 +42,7 @@ function createMockResponse() {
 
 beforeEach(() => {
     process.env = { ...ORIGINAL_ENV };
+    handler.__resetRateLimiter();
     if (originalFetch) {
         global.fetch = originalFetch;
     } else {
@@ -51,6 +52,7 @@ beforeEach(() => {
 
 afterEach(() => {
     process.env = { ...ORIGINAL_ENV };
+    handler.__resetRateLimiter();
     if (originalFetch) {
         global.fetch = originalFetch;
     } else {
@@ -111,14 +113,12 @@ test('handles OPTIONS preflight requests with proper headers', async () => {
 
 test('returns 500 when GEMINI_API_KEY is missing', async () => {
     process.env.ALLOWED_ORIGINS = 'https://allowed.example';
-    process.env.GENERATE_INSIGHT_TOKEN = 'secret';
     delete process.env.GEMINI_API_KEY;
 
     const req = {
         method: 'POST',
         headers: {
             origin: 'https://allowed.example',
-            authorization: 'Bearer secret',
             'content-type': 'application/json'
         },
         body: { prompt: 'Hello' }
@@ -131,31 +131,9 @@ test('returns 500 when GEMINI_API_KEY is missing', async () => {
     assert.deepEqual(res.jsonPayloads[0], { error: 'API key is not configured.' });
 });
 
-test('returns 500 when GENERATE_INSIGHT_TOKEN is missing', async () => {
-    process.env.ALLOWED_ORIGINS = 'https://allowed.example';
-    process.env.GEMINI_API_KEY = 'key';
-    delete process.env.GENERATE_INSIGHT_TOKEN;
-
-    const req = {
-        method: 'POST',
-        headers: {
-            origin: 'https://allowed.example',
-            'content-type': 'application/json'
-        },
-        body: { prompt: 'Hello' }
-    };
-    const res = createMockResponse();
-
-    await handler(req, res);
-
-    assert.deepEqual(res.statusCalls, [500]);
-    assert.deepEqual(res.jsonPayloads[0], { error: 'Server misconfiguration.' });
-});
-
 test('rejects non-POST methods', async () => {
     process.env.ALLOWED_ORIGINS = 'https://allowed.example';
     process.env.GEMINI_API_KEY = 'key';
-    process.env.GENERATE_INSIGHT_TOKEN = 'secret';
 
     const req = {
         method: 'GET',
@@ -171,45 +149,14 @@ test('rejects non-POST methods', async () => {
     assert.deepEqual(res.jsonPayloads[0], { error: 'Method Not Allowed' });
 });
 
-test('rejects requests without a valid bearer token', async () => {
-    process.env.ALLOWED_ORIGINS = 'https://allowed.example';
-    process.env.GEMINI_API_KEY = 'key';
-    process.env.GENERATE_INSIGHT_TOKEN = 'secret';
-
-    let fetchCalled = false;
-    global.fetch = async () => {
-        fetchCalled = true;
-        return { ok: true, json: async () => ({}) };
-    };
-
-    const req = {
-        method: 'POST',
-        headers: {
-            origin: 'https://allowed.example',
-            authorization: 'Bearer wrong',
-            'content-type': 'application/json'
-        },
-        body: { prompt: 'Hello' }
-    };
-    const res = createMockResponse();
-
-    await handler(req, res);
-
-    assert.deepEqual(res.statusCalls, [401]);
-    assert.deepEqual(res.jsonPayloads[0], { error: 'Unauthorized.' });
-    assert.equal(fetchCalled, false);
-});
-
 test('rejects unsupported content types', async () => {
     process.env.ALLOWED_ORIGINS = 'https://allowed.example';
     process.env.GEMINI_API_KEY = 'key';
-    process.env.GENERATE_INSIGHT_TOKEN = 'secret';
 
     const req = {
         method: 'POST',
         headers: {
             origin: 'https://allowed.example',
-            authorization: 'Bearer secret',
             'content-type': 'text/plain'
         },
         body: { prompt: 'Hello' }
@@ -225,13 +172,11 @@ test('rejects unsupported content types', async () => {
 test('validates presence of prompt', async () => {
     process.env.ALLOWED_ORIGINS = 'https://allowed.example';
     process.env.GEMINI_API_KEY = 'key';
-    process.env.GENERATE_INSIGHT_TOKEN = 'secret';
 
     const req = {
         method: 'POST',
         headers: {
             origin: 'https://allowed.example',
-            authorization: 'Bearer secret',
             'content-type': 'application/json'
         },
         body: {}
@@ -247,13 +192,11 @@ test('validates presence of prompt', async () => {
 test('enforces prompt length limits', async () => {
     process.env.ALLOWED_ORIGINS = 'https://allowed.example';
     process.env.GEMINI_API_KEY = 'key';
-    process.env.GENERATE_INSIGHT_TOKEN = 'secret';
 
     const req = {
         method: 'POST',
         headers: {
             origin: 'https://allowed.example',
-            authorization: 'Bearer secret',
             'content-type': 'application/json'
         },
         body: { prompt: 'a'.repeat(4001) }
@@ -269,7 +212,6 @@ test('enforces prompt length limits', async () => {
 test('propagates upstream errors from Gemini', async () => {
     process.env.ALLOWED_ORIGINS = 'https://allowed.example';
     process.env.GEMINI_API_KEY = 'key';
-    process.env.GENERATE_INSIGHT_TOKEN = 'secret';
 
     global.fetch = async () => ({
         ok: false,
@@ -281,7 +223,6 @@ test('propagates upstream errors from Gemini', async () => {
         method: 'POST',
         headers: {
             origin: 'https://allowed.example',
-            authorization: 'Bearer secret',
             'content-type': 'application/json'
         },
         body: { prompt: 'Hello' }
@@ -297,7 +238,6 @@ test('propagates upstream errors from Gemini', async () => {
 test('returns Gemini response payload on success', async () => {
     process.env.ALLOWED_ORIGINS = 'https://allowed.example';
     process.env.GEMINI_API_KEY = 'key';
-    process.env.GENERATE_INSIGHT_TOKEN = 'secret';
 
     const expectedPayload = { contents: [{ parts: [{ text: 'Insight' }] }] };
     const fetchCalls = [];
@@ -314,7 +254,6 @@ test('returns Gemini response payload on success', async () => {
         method: 'POST',
         headers: {
             origin: 'https://allowed.example',
-            authorization: 'Bearer secret',
             'content-type': 'application/json'
         },
         body: { prompt: 'Explain quantum computing.' }
@@ -337,4 +276,40 @@ test('returns Gemini response payload on success', async () => {
             parts: [{ text: 'Explain quantum computing.' }]
         }]
     });
+});
+
+test('limits repeated requests from the same client', async () => {
+    process.env.ALLOWED_ORIGINS = 'https://allowed.example';
+    process.env.GEMINI_API_KEY = 'key';
+    process.env.GENERATE_INSIGHT_MAX_REQUESTS = '2';
+    process.env.GENERATE_INSIGHT_WINDOW_MS = '1000';
+
+    global.fetch = async () => ({
+        ok: true,
+        json: async () => ({ candidates: [{ content: { parts: [{ text: 'Hello' }] } }] })
+    });
+
+    const baseRequest = {
+        method: 'POST',
+        headers: {
+            origin: 'https://allowed.example',
+            'content-type': 'application/json',
+            'x-forwarded-for': '1.2.3.4'
+        },
+        body: { prompt: 'Hello' }
+    };
+
+    const first = createMockResponse();
+    await handler(baseRequest, first);
+    assert.deepEqual(first.statusCalls, [200]);
+
+    const second = createMockResponse();
+    await handler(baseRequest, second);
+    assert.deepEqual(second.statusCalls, [200]);
+
+    const limited = createMockResponse();
+    await handler(baseRequest, limited);
+    assert.deepEqual(limited.statusCalls, [429]);
+    assert.deepEqual(limited.jsonPayloads[0], { error: 'Too many requests. Please slow down.' });
+    assert.ok(limited.getHeader('Retry-After'));
 });

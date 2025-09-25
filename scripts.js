@@ -269,12 +269,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ prompt })
             });
 
+            let data;
+
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.details || 'Unknown error');
+                try {
+                    data = await response.json();
+                } catch (parseError) {
+                    console.warn('Failed to parse error payload:', parseError);
+                }
+
+                const message = data?.error || data?.message || `Request failed with status ${response.status}`;
+                const details = data?.details;
+                throw new Error(details ? `${message} (${details})` : message);
             }
 
-            const data = await response.json();
+            data = data || await response.json();
             const insight = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
             if (insight) {

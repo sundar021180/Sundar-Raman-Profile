@@ -7,9 +7,7 @@
     "start": "vercel dev",
     "test": "node --test"
   },
-  "dependencies": {
-    "@google/generative-ai": "^0.13.0"
-  },
+  "dependencies": {},
   "engines": {
     "node": ">=18.0.0"
   }
