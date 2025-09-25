@@ -70,9 +70,11 @@ afterEach(() => {
     }
 });
 
-test('rejects requests when ALLOWED_ORIGINS is missing', async () => {
+test('rejects requests when ALLOWED_ORIGINS is missing in production', async () => {
     delete process.env.ALLOWED_ORIGINS;
     process.env.GEMINI_API_KEY = 'test-key';
+    process.env.NODE_ENV = 'production';
+    process.env.VERCEL_ENV = 'production';
 
     global.fetch = async () => ({
         ok: true,
@@ -93,6 +95,36 @@ test('rejects requests when ALLOWED_ORIGINS is missing', async () => {
 
     assert.deepEqual(res.statusCalls, [500]);
     assert.deepEqual(res.jsonPayloads[0], { error: 'CORS configuration is missing on the server.' });
+});
+
+test('allows requests when ALLOWED_ORIGINS is missing outside production', async () => {
+    delete process.env.ALLOWED_ORIGINS;
+    delete process.env.NODE_ENV;
+    delete process.env.VERCEL_ENV;
+    process.env.GEMINI_API_KEY = 'test-key';
+
+    const expectedPayload = { data: 'ok' };
+
+    global.fetch = async () => ({
+        ok: true,
+        json: async () => expectedPayload
+    });
+
+    const req = {
+        method: 'POST',
+        headers: authorize({
+            origin: 'https://profile.example',
+            'content-type': 'application/json'
+        }),
+        body: { prompt: 'Hello' }
+    };
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    assert.deepEqual(res.statusCalls, [200]);
+    assert.equal(res.getHeader('Access-Control-Allow-Origin'), '*');
+    assert.deepEqual(res.body, expectedPayload);
 });
 
 test('rejects requests from disallowed origins', async () => {
