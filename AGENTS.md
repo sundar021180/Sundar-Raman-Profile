@@ -39,3 +39,9 @@ These instructions apply to the entire `Sundar-Raman-Profile` repository. If you
 - Run `npm run start` in `api/` to confirm the API bootstraps without runtime errors whenever you modify server-side code.
 - For front-end changes, open `index.html` in a browser and perform a basic smoke test (navigation, collapsible sections, and copy-to-clipboard interactions).
 - Ensure `git status` is clean before requesting review.
+
+### Testing Standards
+- Use Node's built-in test runner (`npm test` from the `api/` directory) for serverless functions. Keep tests under `api/test/` and name files with the `.test.js` suffix.
+- Prefer explicit request/response mocks that assert status codes, headers, and payloads so regression cases remain clear to future contributors.
+- Cover both success paths and common failure scenarios (authentication, validation, upstream errors) when adding new logic.
+- When stubbing globals such as `fetch`, always restore the original implementation in `beforeEach`/`afterEach` hooks to avoid cross-test pollution.

@@ -4,7 +4,8 @@
   "description": "A serverless function to generate AI-powered insights.",
   "main": "api/generate-insight.js",
   "scripts": {
-    "start": "vercel dev"
+    "start": "vercel dev",
+    "test": "node --test"
   },
   "dependencies": {
     "@google/generative-ai": "^0.13.0"
