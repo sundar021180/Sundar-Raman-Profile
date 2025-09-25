@@ -1,8 +1,6 @@
 const { test, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 
-const path = require('node:path');
-
 const handler = require('../generate-insight');
 
 const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent';
@@ -72,17 +70,15 @@ afterEach(() => {
     }
 });
 
-test('falls back to wildcard CORS when ALLOWED_ORIGINS is missing in production', async () => {
+test('rejects requests when ALLOWED_ORIGINS is missing in production', async () => {
     delete process.env.ALLOWED_ORIGINS;
     process.env.GEMINI_API_KEY = 'test-key';
     process.env.NODE_ENV = 'production';
     process.env.VERCEL_ENV = 'production';
 
-    const expectedPayload = { candidates: [{ content: { parts: [{ text: 'hi' }] } }] };
-
     global.fetch = async () => ({
         ok: true,
-        json: async () => expectedPayload
+        json: async () => ({ candidates: [{ content: { parts: [{ text: 'hi' }] } }] })
     });
 
     const req = {
@@ -97,17 +93,37 @@ test('falls back to wildcard CORS when ALLOWED_ORIGINS is missing in production'
 
     await handler(req, res);
 
-    assert.deepEqual(res.statusCalls, [200]);
-    assert.equal(res.getHeader('Access-Control-Allow-Origin'), '*');
-    assert.deepEqual(res.jsonPayloads[0], expectedPayload);
+    assert.deepEqual(res.statusCalls, [500]);
+    assert.deepEqual(res.jsonPayloads[0], { error: 'CORS configuration is missing on the server.' });
 });
 
-test('allows requests when ALLOWED_ORIGINS is missing outside production', async () => {
+test('rejects requests when VERCEL_ENV uses different casing for production', async () => {
     delete process.env.ALLOWED_ORIGINS;
-    delete process.env.NODE_ENV;
-    delete process.env.VERCEL_ENV;
     process.env.GEMINI_API_KEY = 'test-key';
+    process.env.VERCEL_ENV = 'Production';
 
+    global.fetch = async () => ({
+        ok: true,
+        json: async () => ({ candidates: [{ content: { parts: [{ text: 'hi' }] } }] })
+    });
+
+    const req = {
+        method: 'POST',
+        headers: authorize({
+            origin: 'https://profile.example',
+            'content-type': 'application/json'
+        }),
+        body: { prompt: 'Hello' }
+    };
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    assert.deepEqual(res.statusCalls, [500]);
+    assert.deepEqual(res.jsonPayloads[0], { error: 'CORS configuration is missing on the server.' });
+});
+
+    process.env.GENERATE_INSIGHT_ACCESS_TOKENS = VALID_TOKEN;
     const expectedPayload = { data: 'ok' };
 
     global.fetch = async () => ({
@@ -129,6 +145,35 @@ test('allows requests when ALLOWED_ORIGINS is missing outside production', async
 
     assert.deepEqual(res.statusCalls, [200]);
     assert.equal(res.getHeader('Access-Control-Allow-Origin'), '*');
+    assert.deepEqual(res.body, expectedPayload);
+});
+
+test('allows requests without access tokens outside production', async () => {
+    delete process.env.GENERATE_INSIGHT_ACCESS_TOKENS;
+    delete process.env.NODE_ENV;
+    delete process.env.VERCEL_ENV;
+    process.env.GEMINI_API_KEY = 'key';
+
+    const expectedPayload = { ok: true };
+
+    global.fetch = async () => ({
+        ok: true,
+        json: async () => expectedPayload
+    });
+
+    const req = {
+        method: 'POST',
+        headers: {
+            origin: 'https://allowed.example',
+            'content-type': 'application/json'
+        },
+        body: { prompt: 'Hello' }
+    };
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    assert.deepEqual(res.statusCalls, [200]);
     assert.deepEqual(res.body, expectedPayload);
 });
 
@@ -183,7 +228,10 @@ test('returns 500 when GEMINI_API_KEY is missing', async () => {
     await handler(req, res);
 
     assert.deepEqual(res.statusCalls, [500]);
-    assert.deepEqual(res.jsonPayloads[0], { error: 'API key is not configured.' });
+    assert.deepEqual(res.jsonPayloads[0], {
+        error: 'Gemini API key is not configured. Set GEMINI_API_KEY with your Gemini key only.',
+        docs: 'https://ai.google.dev/gemini-api/docs/api-key'
+    });
 });
 
 test('rejects non-POST methods', async () => {
@@ -379,36 +427,6 @@ test('rejects requests without an access token', async () => {
 
     assert.deepEqual(res.statusCalls, [401]);
     assert.deepEqual(res.jsonPayloads[0], { error: 'A valid access token is required.' });
-});
-
-test('loads access tokens from configured file when environment variable is absent', async () => {
-    delete process.env.GENERATE_INSIGHT_ACCESS_TOKENS;
-    process.env.GENERATE_INSIGHT_ACCESS_TOKENS_FILE = path.join(__dirname, 'fixtures/access-tokens.json');
-    process.env.GEMINI_API_KEY = 'key';
-
-    const expectedPayload = { data: 'file-token' };
-
-    global.fetch = async () => ({
-        ok: true,
-        json: async () => expectedPayload
-    });
-
-    const req = {
-        method: 'POST',
-        headers: {
-            origin: 'https://allowed.example',
-            'content-type': 'application/json',
-            authorization: 'Bearer fixture-token'
-        },
-        body: { prompt: 'Hello' }
-    };
-
-    const res = createMockResponse();
-
-    await handler(req, res);
-
-    assert.deepEqual(res.statusCalls, [200]);
-    assert.deepEqual(res.body, expectedPayload);
 });
 
 test('rejects requests with an invalid access token', async () => {
