@@ -155,11 +155,13 @@ const parseAllowedOrigins = () => {
         );
     }
 
-    if (!isProductionEnvironment()) {
-        return new Set(['*']);
+    if (isProductionEnvironment()) {
+        console.warn(
+            'ALLOWED_ORIGINS is not configured. Falling back to wildcard CORS configuration.'
+        );
     }
 
-    return new Set();
+    return new Set(['*']);
 };
 
 const parseAccessTokens = () => {
