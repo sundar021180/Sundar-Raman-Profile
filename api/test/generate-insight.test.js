@@ -70,15 +70,17 @@ afterEach(() => {
     }
 });
 
-test('rejects requests when ALLOWED_ORIGINS is missing in production', async () => {
+test('falls back to wildcard CORS when ALLOWED_ORIGINS is missing in production', async () => {
     delete process.env.ALLOWED_ORIGINS;
     process.env.GEMINI_API_KEY = 'test-key';
     process.env.NODE_ENV = 'production';
     process.env.VERCEL_ENV = 'production';
 
+    const expectedPayload = { candidates: [{ content: { parts: [{ text: 'hi' }] } }] };
+
     global.fetch = async () => ({
         ok: true,
-        json: async () => ({ candidates: [{ content: { parts: [{ text: 'hi' }] } }] })
+        json: async () => expectedPayload
     });
 
     const req = {
@@ -93,8 +95,9 @@ test('rejects requests when ALLOWED_ORIGINS is missing in production', async () 
 
     await handler(req, res);
 
-    assert.deepEqual(res.statusCalls, [500]);
-    assert.deepEqual(res.jsonPayloads[0], { error: 'CORS configuration is missing on the server.' });
+    assert.deepEqual(res.statusCalls, [200]);
+    assert.equal(res.getHeader('Access-Control-Allow-Origin'), '*');
+    assert.deepEqual(res.jsonPayloads[0], expectedPayload);
 });
 
 test('allows requests when ALLOWED_ORIGINS is missing outside production', async () => {
