@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/**/*.js": {
+      "excludeFiles": "api/test/**"
+    }
+  }
+}
