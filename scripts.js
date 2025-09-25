@@ -149,6 +149,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const projectErrorContainer = document.getElementById('projectErrorContainer');
     const projectErrorMessage = document.getElementById('projectErrorMessage');
 
+    const publicationLoadingIndicator = document.getElementById('publicationLoadingIndicator');
+    const publicationInsightContainer = document.getElementById('publicationInsightContainer');
+    const publicationInsightTitle = document.getElementById('publicationInsightTitle');
+    const publicationInsightText = document.getElementById('publicationInsightText');
+    const publicationErrorContainer = document.getElementById('publicationErrorContainer');
+    const publicationErrorMessage = document.getElementById('publicationErrorMessage');
+
     const publications = [
         { id: 'pub1', title: 'Computational Estimation of Microsecond to Second Atomistic Folding Times', description: 'A research paper on developing computational methods for simulating and analyzing protein-ligand binding, which has implications for drug discovery.' },
         { id: 'pub2', title: 'Middle-way flexible docking', description: 'A publication focused on using a combined resolution approach with Monte Carlo simulations to predict the poses of molecules binding to estrogen receptors, a key step in computational drug design.' },
@@ -259,6 +266,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return `Summarise the selected project "${safeTitle}".${detailSentence} Focus on the objectives, approach, and impact in two to three sentences.`;
     };
 
+    const generatePublicationPrompt = (title, description) => {
+        const safeTitle = title || 'the selected publication';
+        const detailSentence = description ? ` Here are the available details: ${description}` : '';
+        return `Summarise the key contribution of the publication "${safeTitle}".${detailSentence} Highlight the research problem, methodology, findings, and potential real-world impact in two to three sentences suitable for an executive profile.`;
+    };
+
     generateBtn.addEventListener('click', () => {
         const topic = topicInput.value.trim();
         if (topic) {
@@ -331,6 +344,61 @@ document.addEventListener('DOMContentLoaded', () => {
                 onSuccess: () => {
                     if (projectInsightContainer) {
                         projectInsightContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            });
+        });
+    });
+
+    const publicationButtons = document.querySelectorAll('.generate-publication-insight');
+
+    publicationButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const publicationItem = button.closest('.publication-item');
+
+            if (!publicationItem) {
+                if (publicationErrorMessage) {
+                    publicationErrorMessage.textContent = 'Unable to identify the selected publication. Please try again.';
+                }
+
+                if (publicationErrorContainer) {
+                    publicationErrorContainer.classList.remove('hidden');
+                }
+                return;
+            }
+
+            const titleElement = publicationItem.querySelector('[data-title]');
+            const descriptionElement = publicationItem.querySelector('[data-description]');
+
+            const title = titleElement?.getAttribute('data-title')?.trim() || titleElement?.textContent?.trim();
+            const description = descriptionElement?.getAttribute('data-description')?.trim() || descriptionElement?.textContent?.trim();
+
+            if (!title && !description) {
+                if (publicationErrorMessage) {
+                    publicationErrorMessage.textContent = 'No details were found for the selected publication. Please try another publication.';
+                }
+
+                if (publicationErrorContainer) {
+                    publicationErrorContainer.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (publicationInsightTitle) {
+                publicationInsightTitle.textContent = title ? `Publication Insight: ${title}` : 'Publication Insight';
+            }
+
+            const prompt = generatePublicationPrompt(title, description);
+
+            generateInsight(prompt, {
+                loadingElement: publicationLoadingIndicator,
+                resultElement: publicationInsightContainer,
+                errorElement: publicationErrorContainer,
+                textElement: publicationInsightText,
+                errorMessageElement: publicationErrorMessage,
+                onSuccess: () => {
+                    if (publicationInsightContainer) {
+                        publicationInsightContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
                 }
             });

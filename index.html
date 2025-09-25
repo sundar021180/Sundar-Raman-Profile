@@ -367,21 +367,61 @@
                     <h4 class="font-bold text-blue-700" data-title="Computational Estimation of Microsecond to Second Atomistic Folding Times">Computational Estimation of Microsecond to Second Atomistic Folding Times</h4>
                     <p class="text-sm italic mb-2">Published in *Journal of the American Chemical Society*, 2019</p>
                     <p class="publication-description" data-description="A research paper on developing computational methods for simulating and analyzing protein-ligand binding, which has implications for drug discovery.">A research paper on developing computational methods for simulating and analyzing protein-ligand binding, which has implications for drug discovery.</p>
+                    <button type="button" class="generate-publication-insight mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-md px-3 py-2 bg-blue-50 hover:bg-blue-100 transition">
+                        <span>Generate publication insight</span>
+                        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                    </button>
                 </div>
                 <div class="publication-item bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                     <h4 class="font-bold text-blue-700" data-title="Middle-way flexible docking: Pose prediction using mixed-resolution Monte Carlo in estrogen receptor $\alpha$">Middle-way flexible docking: Pose prediction using mixed-resolution Monte Carlo in estrogen receptor α</h4>
                     <p class="text-sm italic mb-2">Published in *PloS one*, 2019</p>
                     <p class="publication-description" data-description="A publication focused on using a combined resolution approach with Monte Carlo simulations to predict the poses of molecules binding to estrogen receptors, a key step in computational drug design.">A publication focused on using a combined resolution approach with Monte Carlo simulations to predict the poses of molecules binding to estrogen receptors, a key step in computational drug design.</p>
+                    <button type="button" class="generate-publication-insight mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-md px-3 py-2 bg-blue-50 hover:bg-blue-100 transition">
+                        <span>Generate publication insight</span>
+                        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                    </button>
                 </div>
                 <div class="publication-item bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                     <h4 class="font-bold text-blue-700" data-title="Role of length-dependent stability of collagen-like peptides">Role of length-dependent stability of collagen-like peptides</h4>
                     <p class="text-sm italic mb-2">Published in *The Journal of Physical Chemistry B*, 2008</p>
                     <p class="publication-description" data-description="An early career research paper using molecular dynamics to investigate the stability of collagen-like peptides based on their length, highlighting foundational work in molecular simulation.">An early career research paper using molecular dynamics to investigate the stability of collagen-like peptides based on their length, highlighting foundational work in molecular simulation.</p>
+                    <button type="button" class="generate-publication-insight mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-md px-3 py-2 bg-blue-50 hover:bg-blue-100 transition">
+                        <span>Generate publication insight</span>
+                        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                    </button>
                 </div>
                 <div class="publication-item bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                     <h4 class="font-bold text-blue-700" data-title="Exploring the changes in the structure of $\alpha$-helical peptides adsorbed onto a single walled carbon nanotube using classical molecular dynamics simulation">Exploring the changes in the structure of α-helical peptides adsorbed onto a single walled carbon nanotube using classical molecular dynamics simulation</h4>
                     <p class="text-sm italic mb-2">Published in *The Journal of Physical Chemistry B*, 2010</p>
                     <p class="publication-description" data-description="A research article detailing the use of classical molecular dynamics to analyze how the structure of α-helical peptides changes when they interact with carbon nanotubes, a topic with applications in bionanotechnology.">A research article detailing the use of classical molecular dynamics to analyze how the structure of α-helical peptides changes when they interact with carbon nanotubes, a topic with applications in bionanotechnology.</p>
+                    <button type="button" class="generate-publication-insight mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-md px-3 py-2 bg-blue-50 hover:bg-blue-100 transition">
+                        <span>Generate publication insight</span>
+                        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="publicationInsightArea" class="mt-8 space-y-4">
+                    <div id="publicationLoadingIndicator" class="hidden text-sm text-gray-500 flex items-center gap-2">
+                        <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Generating publication insight...</span>
+                    </div>
+                    <div id="publicationInsightContainer" class="hidden p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                        <h4 id="publicationInsightTitle" class="font-semibold text-blue-900">Publication Insight</h4>
+                        <p id="publicationInsightText" class="mt-2 text-sm text-blue-900"></p>
+                    </div>
+                    <div id="publicationErrorContainer" class="hidden p-4 bg-red-100 border border-red-200 rounded-lg">
+                        <p id="publicationErrorMessage" class="text-sm text-red-700"></p>
+                    </div>
                 </div>
             </div>
         </section>
