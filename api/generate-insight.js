@@ -6,6 +6,8 @@
 
 // Define the API endpoint and model.
 const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
 
@@ -164,18 +166,141 @@ const parseAllowedOrigins = () => {
     return new Set(['*']);
 };
 
-const parseAccessTokens = () => {
-    const { GENERATE_INSIGHT_ACCESS_TOKENS } = process.env;
-    if (!GENERATE_INSIGHT_ACCESS_TOKENS) {
-        return new Set();
+const ACCESS_TOKEN_ENV_KEYS = [
+    'GENERATE_INSIGHT_ACCESS_TOKENS',
+    'GENERATE_INSIGHT_ACCESS_TOKEN',
+    'INSIGHT_ACCESS_TOKENS',
+    'INSIGHT_ACCESS_TOKEN',
+    'ACCESS_TOKENS',
+    'ACCESS_TOKEN'
+];
+
+const ACCESS_TOKEN_FILE_ENV_KEYS = [
+    'GENERATE_INSIGHT_ACCESS_TOKENS_FILE',
+    'GENERATE_INSIGHT_ACCESS_TOKENS_PATH',
+    'INSIGHT_ACCESS_TOKENS_FILE',
+    'ACCESS_TOKENS_FILE',
+    'ACCESS_TOKEN_FILE'
+];
+
+const parseTokenList = (tokens) => {
+    if (tokens && typeof tokens === 'object' && !Array.isArray(tokens)) {
+        return parseTokenList(tokens.tokens);
     }
 
-    return new Set(
-        GENERATE_INSIGHT_ACCESS_TOKENS
-            .split(',')
+    if (typeof tokens === 'string') {
+        const trimmed = tokens.trim();
+        if (trimmed.length === 0) {
+            return [];
+        }
+
+        if (trimmed.startsWith('[')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                return parseTokenList(parsed);
+            } catch (parseError) {
+                console.warn('Failed to parse access token string as JSON.', parseError);
+            }
+        }
+
+        return trimmed
+            .split(/\n|,/)
             .map((token) => token.trim())
-            .filter(Boolean)
-    );
+            .filter(Boolean);
+    }
+
+    if (Array.isArray(tokens)) {
+        return tokens
+            .map((token) => (typeof token === 'string' ? token.trim() : ''))
+            .filter(Boolean);
+    }
+
+    return [];
+};
+
+const loadAccessTokensFromEnv = () => {
+    for (const key of ACCESS_TOKEN_ENV_KEYS) {
+        const raw = process.env[key];
+        if (raw === undefined || raw === null) {
+            continue;
+        }
+
+        const tokens = parseTokenList(raw);
+        if (tokens.length > 0) {
+            return new Set(tokens);
+        }
+    }
+
+    return new Set();
+};
+
+const resolveTokenFilePath = () => {
+    for (const key of ACCESS_TOKEN_FILE_ENV_KEYS) {
+        const candidate = process.env[key];
+        if (typeof candidate === 'string' && candidate.trim().length > 0) {
+            const trimmed = candidate.trim();
+            if (path.isAbsolute(trimmed)) {
+                return trimmed;
+            }
+
+            const cwdPath = path.resolve(process.cwd(), trimmed);
+            if (fs.existsSync(cwdPath)) {
+                return cwdPath;
+            }
+
+            return path.resolve(__dirname, trimmed);
+        }
+    }
+
+    return path.join(__dirname, 'access-tokens.json');
+};
+
+const loadAccessTokensFromFile = () => {
+    const filePath = resolveTokenFilePath();
+
+    try {
+        const fileContents = fs.readFileSync(filePath, 'utf8');
+        if (!fileContents) {
+            return new Set();
+        }
+
+        let parsed = fileContents;
+        if (typeof fileContents === 'string') {
+            const trimmedContents = fileContents.trim();
+            if (trimmedContents.length === 0) {
+                return new Set();
+            }
+
+            try {
+                parsed = JSON.parse(trimmedContents);
+            } catch (parseError) {
+                console.warn('Failed to parse access token file as JSON.', parseError);
+                return new Set();
+            }
+        }
+
+        const tokens = parseTokenList(parsed);
+        return new Set(tokens);
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            console.warn('Unable to read access token file.', error);
+        }
+        return new Set();
+    }
+};
+
+const parseAccessTokens = () => {
+    const envTokens = loadAccessTokensFromEnv();
+    if (envTokens.size > 0) {
+        return envTokens;
+    }
+
+    const fileTokens = loadAccessTokensFromFile();
+    if (fileTokens.size > 0) {
+        return fileTokens;
+    }
+
+    return new Set();
 };
 
 const fetchWithTimeout = async (url, options, timeoutMs) => {
