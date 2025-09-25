@@ -213,6 +213,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const generateProjectPrompt = (title, description) => {
+        const safeTitle = title || 'the selected project';
+        const detailSentence = description ? ` Here are the available details: ${description}` : '';
+        return `Summarise the selected project "${safeTitle}".${detailSentence} Focus on the objectives, approach, and impact in two to three sentences.`;
+    };
+
     generateBtn.addEventListener('click', () => {
         const topic = topicInput.value.trim();
         if (topic) {
@@ -234,6 +240,36 @@ document.addEventListener('DOMContentLoaded', () => {
             errorMessage.textContent = 'Please select a publication or project and enter a question to generate a context-aware insight.';
             errorContainer.classList.remove('hidden');
         }
+    });
+
+    const projectLinks = document.querySelectorAll('.project-item a');
+
+    projectLinks.forEach(link => {
+        link.addEventListener('click', (event) => {
+            event.preventDefault();
+
+            const projectItem = event.currentTarget.closest('.project-item');
+            if (!projectItem) {
+                errorMessage.textContent = 'Unable to identify the selected project. Please try again.';
+                errorContainer.classList.remove('hidden');
+                return;
+            }
+
+            const titleElement = projectItem.querySelector('[data-title]');
+            const descriptionElement = projectItem.querySelector('[data-description]');
+
+            const title = titleElement?.getAttribute('data-title')?.trim() || titleElement?.textContent?.trim();
+            const description = descriptionElement?.getAttribute('data-description')?.trim() || descriptionElement?.textContent?.trim();
+
+            if (!title && !description) {
+                errorMessage.textContent = 'No details were found for the selected project. Please try another project.';
+                errorContainer.classList.remove('hidden');
+                return;
+            }
+
+            const prompt = generateProjectPrompt(title, description);
+            generateInsight(prompt);
+        });
     });
 
     copyInsightBtn.addEventListener('click', () => {
