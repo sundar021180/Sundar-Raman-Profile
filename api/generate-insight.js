@@ -129,18 +129,37 @@ const resetRateLimiter = () => {
     rateLimitBuckets.clear();
 };
 
-const parseAllowedOrigins = () => {
-    const { ALLOWED_ORIGINS } = process.env;
-    if (!ALLOWED_ORIGINS) {
-        return new Set();
+const isProductionEnvironment = () => {
+    const { VERCEL_ENV, NODE_ENV } = process.env;
+
+    if (typeof VERCEL_ENV === 'string' && VERCEL_ENV.length > 0) {
+        return VERCEL_ENV === 'production';
     }
 
-    return new Set(
-        ALLOWED_ORIGINS
-            .split(",")
-            .map((origin) => origin.trim())
-            .filter(Boolean)
-    );
+    if (typeof NODE_ENV === 'string' && NODE_ENV.length > 0) {
+        return NODE_ENV === 'production';
+    }
+
+    return false;
+};
+
+const parseAllowedOrigins = () => {
+    const { ALLOWED_ORIGINS } = process.env;
+
+    if (typeof ALLOWED_ORIGINS === 'string' && ALLOWED_ORIGINS.trim().length > 0) {
+        return new Set(
+            ALLOWED_ORIGINS
+                .split(",")
+                .map((origin) => origin.trim())
+                .filter(Boolean)
+        );
+    }
+
+    if (!isProductionEnvironment()) {
+        return new Set(['*']);
+    }
+
+    return new Set();
 };
 
 const parseAccessTokens = () => {
