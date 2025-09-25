@@ -60,16 +60,29 @@ afterEach(() => {
     }
 });
 
-test('rejects when ALLOWED_ORIGINS is missing', async () => {
+test('falls back to request origin when ALLOWED_ORIGINS is missing', async () => {
     delete process.env.ALLOWED_ORIGINS;
+    process.env.GEMINI_API_KEY = 'test-key';
 
-    const req = { method: 'POST', headers: {} };
+    global.fetch = async () => ({
+        ok: true,
+        json: async () => ({ candidates: [{ content: { parts: [{ text: 'hi' }] } }] })
+    });
+
+    const req = {
+        method: 'POST',
+        headers: {
+            origin: 'https://profile.example',
+            'content-type': 'application/json'
+        },
+        body: { prompt: 'Hello' }
+    };
     const res = createMockResponse();
 
     await handler(req, res);
 
-    assert.deepEqual(res.statusCalls, [500]);
-    assert.deepEqual(res.jsonPayloads[0], { error: 'Server misconfiguration.' });
+    assert.deepEqual(res.statusCalls, [200]);
+    assert.equal(res.getHeader('Access-Control-Allow-Origin'), 'https://profile.example');
 });
 
 test('rejects requests from disallowed origins', async () => {
