@@ -503,36 +503,27 @@
             contextSelect.appendChild(option);
         });
 
-        // Function to handle the API call to the serverless function
+        // Function to handle the API call to the Vercel serverless function
         async function fetchInsight(prompt) {
             loadingIndicator.classList.remove('hidden');
             resultContainer.classList.add('hidden');
             errorContainer.classList.add('hidden');
 
             try {
-                const payload = {
-                    contents: [{ parts: [{ text: prompt }] }],
-                };
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                // The new API endpoint is your Vercel serverless function
+                const apiUrl = '/api/generate-insight';
 
                 let response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ prompt })
                 });
 
                 if (!response.ok) {
-                    let errorMsg = `HTTP error! Status: ${response.status}`;
-                    try {
-                        const errorData = await response.json();
-                        errorMsg = errorData.details || errorData.error || errorMsg;
-                    } catch (jsonError) {
-                        errorMsg = response.statusText || errorMsg;
-                    }
-                    throw new Error(errorMsg);
+                    let errorData = await response.json();
+                    throw new Error(errorData.details || errorData.error || 'An unknown error occurred.');
                 }
 
                 const data = await response.json();
