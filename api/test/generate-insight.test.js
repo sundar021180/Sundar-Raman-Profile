@@ -43,6 +43,10 @@ function createMockResponse() {
 }
 
 const VALID_TOKEN = 'valid-token';
+const ACCESS_TOKEN_ERROR_RESPONSE = {
+    error: 'A valid insight generator access token is required.',
+    details: 'Configure GENERATE_INSIGHT_ACCESS_TOKENS (or access-tokens.json) with the same token you enter in the UI. This token is separate from your Gemini API key.'
+};
 
 const authorize = (headers = {}) => ({
     ...headers,
@@ -378,7 +382,7 @@ test('rejects requests without an access token', async () => {
     await handler(req, res);
 
     assert.deepEqual(res.statusCalls, [401]);
-    assert.deepEqual(res.jsonPayloads[0], { error: 'A valid access token is required.' });
+    assert.deepEqual(res.jsonPayloads[0], ACCESS_TOKEN_ERROR_RESPONSE);
 });
 
 test('loads access tokens from configured file when environment variable is absent', async () => {
@@ -428,7 +432,7 @@ test('rejects requests with an invalid access token', async () => {
     await handler(req, res);
 
     assert.deepEqual(res.statusCalls, [401]);
-    assert.deepEqual(res.jsonPayloads[0], { error: 'A valid access token is required.' });
+    assert.deepEqual(res.jsonPayloads[0], ACCESS_TOKEN_ERROR_RESPONSE);
 });
 
 test('retries Gemini calls on transient failures', async () => {

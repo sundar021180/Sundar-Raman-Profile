@@ -105,6 +105,7 @@
                     />
                     <p id="accessTokenHelp" class="text-xs text-blue-800 space-y-1">
                         <span class="block">The token never leaves your browser storage until you generate an insight. It is required to prevent unauthorized use of the AI proxy.</span>
+                        <span class="block">Create this access token yourself and add it to the <code>GENERATE_INSIGHT_ACCESS_TOKENS</code> environment variable (or the <code>api/access-tokens.json</code> file) so the server can validate it. This token is distinct from your Gemini API key.</span>
                         <span class="block">You will also need to supply your own <a href="https://ai.google.dev/gemini-api/docs/api-key" class="underline text-blue-700 hover:text-blue-900" target="_blank" rel="noopener noreferrer">Gemini API key</a> when deploying this experience. The linked guide explains how to create one.</span>
                     </p>
                 </div>

@@ -341,7 +341,10 @@ module.exports = async (req, res) => {
     const rawAccessToken = getAccessTokenFromHeader(req);
     if (!rawAccessToken || !accessTokens.has(rawAccessToken)) {
         console.info('Rejected request due to missing or invalid access token.');
-        return res.status(401).json({ error: "A valid access token is required." });
+        return res.status(401).json({
+            error: "A valid insight generator access token is required.",
+            details: "Configure GENERATE_INSIGHT_ACCESS_TOKENS (or access-tokens.json) with the same token you enter in the UI. This token is separate from your Gemini API key."
+        });
     }
 
     const hashedToken = hashToken(rawAccessToken);
