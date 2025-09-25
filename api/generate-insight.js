@@ -1,10 +1,11 @@
 /**
  * Vercel Serverless Function to securely generate AI insights.
- * This function acts as a proxy, protecting the API key from the client-side.
- * It reads the GEMINI_API_KEY from Vercel's environment variables.
+ * - Handles CORS correctly (same-origin, explicit allow-list, and *.wildcards)
+ * - Optional bearer-token enforcement in production
+ * - Simple token-bucket rate limiting
+ * - Timeout & limited retries for upstream requests
  */
 
-// Define the API endpoint and model.
 const crypto = require('node:crypto');
 
 const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
@@ -16,362 +17,288 @@ const DEFAULT_MAX_RETRIES = 1;
 const rateLimitBuckets = new Map();
 let lastRateLimitSweepAt = 0;
 
-const defaultRateLimitConfig = {
-    maxRequests: 5,
-    windowMs: 60_000
-};
+const defaultRateLimitConfig = { maxRequests: 5, windowMs: 60_000 };
+const defaultRequestConfig   = { timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS, maxRetries: DEFAULT_MAX_RETRIES };
 
-const defaultRequestConfig = {
-    timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS,
-    maxRetries: DEFAULT_MAX_RETRIES
-};
+/* ----------------------------- helpers ----------------------------- */
 
-const getRateLimitConfig = () => {
-    const maxRequests = Number(process.env.GENERATE_INSIGHT_MAX_REQUESTS ?? defaultRateLimitConfig.maxRequests);
-    const windowMs = Number(process.env.GENERATE_INSIGHT_WINDOW_MS ?? defaultRateLimitConfig.windowMs);
-
-    return {
-        maxRequests: Number.isFinite(maxRequests) ? maxRequests : defaultRateLimitConfig.maxRequests,
-        windowMs: Number.isFinite(windowMs) && windowMs > 0 ? windowMs : defaultRateLimitConfig.windowMs
-    };
-};
-
-const getRequestConfig = () => {
-    const timeoutMs = Number(process.env.GENERATE_INSIGHT_TIMEOUT_MS ?? defaultRequestConfig.timeoutMs);
-    const maxRetries = Number(process.env.GENERATE_INSIGHT_MAX_RETRIES ?? defaultRequestConfig.maxRetries);
-
-    return {
-        timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : defaultRequestConfig.timeoutMs,
-        maxRetries: Number.isFinite(maxRetries) && maxRetries >= 0 ? Math.min(maxRetries, 3) : defaultRequestConfig.maxRetries
-    };
-};
-
-const getAccessTokenFromHeader = (req) => {
-    const rawHeader = req.headers?.authorization || req.headers?.Authorization;
-    if (typeof rawHeader !== 'string') {
-        return null;
-    }
-
-    const match = rawHeader.match(/^Bearer\s+(.+)$/i);
-    if (!match) {
-        return null;
-    }
-
-    return match[1].trim();
-};
-
-const hashToken = (token) => {
-    return crypto.createHash('sha256').update(token).digest('hex');
-};
-
-const getClientKey = (req, hashedToken) => {
-    if (hashedToken) {
-        return `token:${hashedToken}`;
-    }
-
-    const forwardedFor = req.headers['x-forwarded-for'];
-    if (typeof forwardedFor === 'string' && forwardedFor.trim().length > 0) {
-        return forwardedFor.split(',')[0].trim();
-    }
-
-    return req.socket?.remoteAddress || 'unknown';
-};
-
-const pruneExpiredRateLimitBuckets = (now = Date.now()) => {
-    if (now - lastRateLimitSweepAt < 60_000) {
-        return;
-    }
-
-    lastRateLimitSweepAt = now;
-
-    for (const [key, bucket] of rateLimitBuckets.entries()) {
-        if (bucket.expiresAt <= now) {
-            rateLimitBuckets.delete(key);
-        }
-    }
-};
-
-const isRateLimited = (clientKey, config, now = Date.now()) => {
-    if (!config.maxRequests || config.maxRequests < 0) {
-        return false;
-    }
-
-    pruneExpiredRateLimitBuckets(now);
-
-    const existingBucket = rateLimitBuckets.get(clientKey);
-
-    if (!existingBucket || existingBucket.expiresAt <= now) {
-        rateLimitBuckets.set(clientKey, {
-            count: 1,
-            expiresAt: now + config.windowMs
-        });
-        return false;
-    }
-
-    if (existingBucket.count >= config.maxRequests) {
-        return true;
-    }
-
-    existingBucket.count += 1;
-    return false;
-};
-
-const secondsUntilReset = (clientKey, now = Date.now()) => {
-    const bucket = rateLimitBuckets.get(clientKey);
-    if (!bucket) {
-        return 0;
-    }
-
-    return Math.max(0, Math.ceil((bucket.expiresAt - now) / 1000));
-};
-
-const resetRateLimiter = () => {
-    rateLimitBuckets.clear();
-};
-
-const normalizeEnvironmentValue = (value) => {
-    if (typeof value !== 'string') {
-        return '';
-    }
-
-    return value.trim().toLowerCase();
-};
+const normalizeEnvironmentValue = (v) => typeof v === 'string' ? v.trim().toLowerCase() : '';
 
 const isProductionEnvironment = () => {
-    const { VERCEL_ENV, NODE_ENV } = process.env;
-
-    const normalizedVercelEnv = normalizeEnvironmentValue(VERCEL_ENV);
-    if (normalizedVercelEnv) {
-        return normalizedVercelEnv === 'production';
-    }
-
-    const normalizedNodeEnv = normalizeEnvironmentValue(NODE_ENV);
-    if (normalizedNodeEnv) {
-        return normalizedNodeEnv === 'production';
-    }
-
-    return false;
+  const { VERCEL_ENV, NODE_ENV } = process.env;
+  const ve = normalizeEnvironmentValue(VERCEL_ENV);
+  if (ve) return ve === 'production';
+  const ne = normalizeEnvironmentValue(NODE_ENV);
+  if (ne) return ne === 'production';
+  return false;
 };
 
 const parseAllowedOrigins = () => {
-    const { ALLOWED_ORIGINS } = process.env;
+  const { ALLOWED_ORIGINS } = process.env;
+  if (typeof ALLOWED_ORIGINS === 'string' && ALLOWED_ORIGINS.trim()) {
+    return new Set(
+      ALLOWED_ORIGINS.split(',')
+        .map(s => s.trim())
+        .filter(Boolean)
+    );
+  }
+  // Non-prod: be permissive if not configured
+  if (!isProductionEnvironment()) return new Set(['*']);
+  // Prod without configuration: empty set -> will error
+  return new Set();
+};
 
-    if (typeof ALLOWED_ORIGINS === 'string' && ALLOWED_ORIGINS.trim().length > 0) {
-        return new Set(
-            ALLOWED_ORIGINS
-                .split(",")
-                .map((origin) => origin.trim())
-                .filter(Boolean)
-        );
-    }
+const isWildcardMatch = (origin, pattern) => {
+  // pattern like "*.vercel.app"
+  if (!pattern.startsWith('*.')) return false;
+  try {
+    const { hostname } = new URL(origin);
+    const suffix = pattern.slice(2); // "vercel.app"
+    return hostname === suffix || hostname.endsWith('.' + suffix);
+  } catch {
+    return false;
+  }
+};
 
-    if (!isProductionEnvironment()) {
-        return new Set(['*']);
-    }
+const isOriginAllowed = (origin, allowed) => {
+  // Same-origin fetches often have no Origin header.
+  if (!origin) return true;                        // allow missing Origin (same-origin)
+  if (allowed.has('*')) return true;
+  if (allowed.has(origin)) return true;
 
-    return new Set();
+  for (const entry of allowed) {
+    if (entry.startsWith('*.') && isWildcardMatch(origin, entry)) return true;
+  }
+  return false;
+};
+
+const getCorsOriginToEcho = (origin, allowed) => {
+  if (!origin) return null;                        // only echo for cross-origin
+  if (allowed.has('*')) return '*';
+  if (allowed.has(origin)) return origin;
+  for (const entry of allowed) {
+    if (entry.startsWith('*.') && isWildcardMatch(origin, entry)) return origin;
+  }
+  return null;
+};
+
+const getAccessTokenFromHeader = (req) => {
+  const raw = req.headers?.authorization || req.headers?.Authorization;
+  if (typeof raw !== 'string') return null;
+  const m = raw.match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : null;
+};
+
+const hashToken = (t) => crypto.createHash('sha256').update(t).digest('hex');
+
+const getClientKey = (req, hashedToken) => {
+  if (hashedToken) return `token:${hashedToken}`;
+  const fwd = req.headers['x-forwarded-for'];
+  if (typeof fwd === 'string' && fwd.trim()) return fwd.split(',')[0].trim();
+  return req.socket?.remoteAddress || 'unknown';
+};
+
+const pruneExpiredRateLimitBuckets = (now = Date.now()) => {
+  if (now - lastRateLimitSweepAt < 60_000) return;
+  lastRateLimitSweepAt = now;
+  for (const [key, bucket] of rateLimitBuckets.entries()) {
+    if (bucket.expiresAt <= now) rateLimitBuckets.delete(key);
+  }
+};
+
+const isRateLimited = (clientKey, config, now = Date.now()) => {
+  if (!config.maxRequests || config.maxRequests < 0) return false;
+  pruneExpiredRateLimitBuckets(now);
+
+  const b = rateLimitBuckets.get(clientKey);
+  if (!b || b.expiresAt <= now) {
+    rateLimitBuckets.set(clientKey, { count: 1, expiresAt: now + config.windowMs });
+    return false;
+  }
+  if (b.count >= config.maxRequests) return true;
+  b.count += 1;
+  return false;
+};
+
+const secondsUntilReset = (clientKey, now = Date.now()) => {
+  const b = rateLimitBuckets.get(clientKey);
+  return b ? Math.max(0, Math.ceil((b.expiresAt - now) / 1000)) : 0;
+};
+
+const resetRateLimiter = () => rateLimitBuckets.clear();
+
+const getRateLimitConfig = () => {
+  const n = Number(process.env.GENERATE_INSIGHT_MAX_REQUESTS ?? defaultRateLimitConfig.maxRequests);
+  const w = Number(process.env.GENERATE_INSIGHT_WINDOW_MS ?? defaultRateLimitConfig.windowMs);
+  return {
+    maxRequests: Number.isFinite(n) ? n : defaultRateLimitConfig.maxRequests,
+    windowMs: Number.isFinite(w) && w > 0 ? w : defaultRateLimitConfig.windowMs
+  };
+};
+
+const getRequestConfig = () => {
+  const t = Number(process.env.GENERATE_INSIGHT_TIMEOUT_MS ?? defaultRequestConfig.timeoutMs);
+  const r = Number(process.env.GENERATE_INSIGHT_MAX_RETRIES ?? defaultRequestConfig.maxRetries);
+  return {
+    timeoutMs: Number.isFinite(t) && t > 0 ? t : defaultRequestConfig.timeoutMs,
+    maxRetries: Number.isFinite(r) && r >= 0 ? Math.min(r, 3) : defaultRequestConfig.maxRetries
+  };
 };
 
 const parseAccessTokens = () => {
-    const { GENERATE_INSIGHT_ACCESS_TOKENS } = process.env;
-    if (!GENERATE_INSIGHT_ACCESS_TOKENS) {
-        return new Set();
-    }
-
-    return new Set(
-        GENERATE_INSIGHT_ACCESS_TOKENS
-            .split(',')
-            .map((token) => token.trim())
-            .filter(Boolean)
-    );
+  const { GENERATE_INSIGHT_ACCESS_TOKENS } = process.env;
+  if (!GENERATE_INSIGHT_ACCESS_TOKENS) return new Set();
+  return new Set(
+    GENERATE_INSIGHT_ACCESS_TOKENS.split(',')
+      .map(s => s.trim())
+      .filter(Boolean)
+  );
 };
 
 const fetchWithTimeout = async (url, options, timeoutMs) => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-        controller.abort();
-    }, timeoutMs);
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(id);
+  }
+};
 
+const callGeminiWithRetry = async (payload, apiKey, cfg) => {
+  const { timeoutMs, maxRetries } = cfg;
+  const init = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  };
+
+  let attempt = 0, lastError;
+  while (attempt <= maxRetries) {
+    attempt += 1;
     try {
-        return await fetch(url, {
-            ...options,
-            signal: controller.signal
-        });
-    } finally {
-        clearTimeout(timeoutId);
+      const resp = await fetchWithTimeout(`${API_URL}?key=${apiKey}`, init, timeoutMs);
+      if (!resp.ok) {
+        const txt = await resp.text().catch(() => '');
+        console.warn('Gemini non-OK', resp.status, txt);
+        if (resp.status >= 500 && attempt <= maxRetries) continue;
+        throw new Error('Upstream request failed.');
+      }
+      return resp.json();
+    } catch (err) {
+      lastError = err;
+      const retryable = err.name === 'AbortError' || err.name === 'FetchError' || err.message === 'Upstream request failed.';
+      if (!retryable || attempt > maxRetries) throw lastError;
+      await new Promise(r => setTimeout(r, 200 * attempt));
     }
+  }
+  throw lastError || new Error('Failed to contact Gemini API.');
 };
 
-const callGeminiWithRetry = async (payload, apiKey, requestConfig) => {
-    const { timeoutMs, maxRetries } = requestConfig;
-    const requestInit = {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-    };
-
-    let attempt = 0;
-    let lastError;
-
-    while (attempt <= maxRetries) {
-        attempt += 1;
-        try {
-            const response = await fetchWithTimeout(`${API_URL}?key=${apiKey}`, requestInit, timeoutMs);
-            if (!response.ok) {
-                const errorText = await response.text().catch(() => '');
-                console.warn('Gemini API returned non-OK response', response.status, errorText);
-
-                if (response.status >= 500 && attempt <= maxRetries) {
-                    continue;
-                }
-
-                throw new Error('Upstream request failed.');
-            }
-
-            return response.json();
-        } catch (error) {
-            lastError = error;
-
-            if (error.name === 'AbortError') {
-                console.warn('Gemini request aborted due to timeout.');
-            }
-
-            const isRetryable = error.name === 'AbortError' || error.name === 'FetchError' || error.message === 'Upstream request failed.';
-            if (!isRetryable || attempt > maxRetries) {
-                throw lastError;
-            }
-
-            await new Promise((resolve) => setTimeout(resolve, 200 * attempt));
-        }
-    }
-
-    throw lastError || new Error('Failed to contact Gemini API.');
-};
+/* ----------------------------- handler ----------------------------- */
 
 module.exports = async (req, res) => {
-    const allowedOrigins = parseAllowedOrigins();
-    const requestOrigin = req.headers.origin;
+  const allowedOrigins = parseAllowedOrigins();
+  const requestOrigin = req.headers.origin || '';
 
-    if (allowedOrigins.size === 0) {
-        console.error('ALLOWED_ORIGINS is not configured. Rejecting request.');
-        res.status(500).json({ error: "CORS configuration is missing on the server." });
-        return;
-    }
+  // In production, require ALLOWED_ORIGINS to be set (or '*')
+  if (allowedOrigins.size === 0 && isProductionEnvironment()) {
+    console.error('ALLOWED_ORIGINS is not configured in production.');
+    return res.status(500).json({ error: "CORS configuration is missing on the server." });
+  }
 
-    if (!requestOrigin && !allowedOrigins.has('*')) {
-        res.status(403).json({ error: "Origin not allowed." });
-        return;
-    }
+  // Decide if allowed. Missing Origin => treat as same-origin and allow.
+  const originAllowed = isOriginAllowed(requestOrigin, allowedOrigins);
+  if (!originAllowed) {
+    return res.status(403).json({ error: "Origin not allowed." });
+  }
 
-    if (requestOrigin && !allowedOrigins.has(requestOrigin) && !allowedOrigins.has('*')) {
-        res.status(403).json({ error: "Origin not allowed." });
-        return;
-    }
-
-    if (allowedOrigins.has('*')) {
-        res.setHeader('Access-Control-Allow-Origin', '*');
-    } else if (requestOrigin && allowedOrigins.has(requestOrigin)) {
-        res.setHeader('Access-Control-Allow-Origin', requestOrigin);
-    }
+  // Set CORS headers only for cross-origin (when Origin exists).
+  const echoOrigin = getCorsOriginToEcho(requestOrigin, allowedOrigins);
+  if (echoOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', echoOrigin);
     res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Max-Age', '600');
 
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.setHeader('Access-Control-Max-Age', '600');
+  // Preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
 
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-        res.status(204).end();
-        return;
+  // Enforce access tokens in production if configured
+  const accessTokens = parseAccessTokens();
+  const inProduction = isProductionEnvironment();
+  const shouldEnforceAccessToken = accessTokens.size > 0;
+  if (inProduction && !shouldEnforceAccessToken) {
+    console.error('Access token configuration missing in production.');
+    return res.status(500).json({ error: "Access token configuration is missing on the server." });
+  }
+
+  let hashedToken;
+  if (shouldEnforceAccessToken) {
+    const raw = getAccessTokenFromHeader(req);
+    if (!raw || !accessTokens.has(raw)) {
+      console.info('Rejected: missing/invalid access token.');
+      return res.status(401).json({ error: "A valid access token is required." });
     }
+    hashedToken = hashToken(raw);
+  } else {
+    console.info('Access tokens not configured; skipping enforcement (non-production).');
+  }
 
-    const accessTokens = parseAccessTokens();
-    const inProduction = isProductionEnvironment();
-    const shouldEnforceAccessToken = accessTokens.size > 0;
+  // API key
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  if (!GEMINI_API_KEY) {
+    return res.status(500).json({
+      error: "Gemini API key is not configured. Set GEMINI_API_KEY with your Gemini key only.",
+      docs: "https://ai.google.dev/gemini-api/docs/api-key"
+    });
+  }
 
-    if (inProduction && !shouldEnforceAccessToken) {
-        console.error('GENERATOR access tokens missing.');
-        return res.status(500).json({ error: "Access token configuration is missing on the server." });
-    }
+  // Method & body validation
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: "Method Not Allowed" });
+  }
 
-    let hashedToken;
-    if (shouldEnforceAccessToken) {
-        const rawAccessToken = getAccessTokenFromHeader(req);
-        if (!rawAccessToken || !accessTokens.has(rawAccessToken)) {
-            console.info('Rejected request due to missing or invalid access token.');
-            return res.status(401).json({ error: "A valid access token is required." });
-        }
+  const contentType = req.headers['content-type'] || '';
+  if (!contentType.includes('application/json')) {
+    return res.status(415).json({ error: "Content-Type must be application/json." });
+  }
 
-        hashedToken = hashToken(rawAccessToken);
-    } else {
-        console.info('Access tokens are not configured; skipping enforcement outside production.');
-    }
+  const { prompt } = req.body || {};
+  if (typeof prompt !== 'string' || !prompt.trim()) {
+    return res.status(400).json({ error: "Prompt is required in the request body." });
+  }
+  if (prompt.length > MAX_PROMPT_LENGTH) {
+    return res.status(413).json({ error: "Prompt is too long." });
+  }
 
-    // Get the API key from the environment variables.
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  // Rate limit
+  const clientKey = getClientKey(req, hashedToken);
+  const rlCfg = getRateLimitConfig();
+  const now = Date.now();
+  if (isRateLimited(clientKey, rlCfg, now)) {
+    const retryAfter = secondsUntilReset(clientKey, now) || Math.ceil(rlCfg.windowMs / 1000);
+    res.setHeader('Retry-After', retryAfter);
+    console.info('Rate limit exceeded for client', clientKey, 'retry after', retryAfter);
+    return res.status(429).json({ error: "Too many requests. Please slow down." });
+  }
 
-    // Check if the API key is present.
-    if (!GEMINI_API_KEY) {
-        return res.status(500).json({
-            error: "Gemini API key is not configured. Set GEMINI_API_KEY with your Gemini key only.",
-            docs: "https://ai.google.dev/gemini-api/docs/api-key"
-        });
-    }
-
-    // Ensure the request method is POST.
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: "Method Not Allowed" });
-    }
-
-    const clientKey = getClientKey(req, hashedToken);
-    const rateLimitConfig = getRateLimitConfig();
-    const now = Date.now();
-
-    if (isRateLimited(clientKey, rateLimitConfig, now)) {
-        const retryAfterSeconds = secondsUntilReset(clientKey, now) || Math.ceil(rateLimitConfig.windowMs / 1000);
-        res.setHeader('Retry-After', retryAfterSeconds);
-        console.info('Rate limit exceeded for client', clientKey, 'retry after', retryAfterSeconds);
-        return res.status(429).json({ error: "Too many requests. Please slow down." });
-    }
-
-    try {
-        const contentType = req.headers['content-type'] || '';
-        if (!contentType.includes('application/json')) {
-            return res.status(415).json({ error: "Content-Type must be application/json." });
-        }
-
-        // Parse the request body to get the prompt.
-        const { prompt } = req.body || {};
-
-        if (typeof prompt !== 'string' || prompt.trim().length === 0) {
-            return res.status(400).json({ error: "Prompt is required in the request body." });
-        }
-
-        if (prompt.length > MAX_PROMPT_LENGTH) {
-            return res.status(413).json({ error: "Prompt is too long." });
-        }
-
-        const payload = {
-            contents: [{
-                parts: [{
-                    text: prompt
-                }]
-            }]
-        };
-        const requestConfig = getRequestConfig();
-
-        const data = await callGeminiWithRetry(payload, GEMINI_API_KEY, requestConfig);
-        res.status(200).json(data);
-
-    } catch (error) {
-        console.error('API call error:', error);
-        res.status(500).json({ error: "Failed to generate insight." });
-    }
+  // Call upstream
+  try {
+    const payload = { contents: [{ parts: [{ text: prompt }] }] };
+    const reqCfg = getRequestConfig();
+    const data = await callGeminiWithRetry(payload, GEMINI_API_KEY, reqCfg);
+    return res.status(200).json(data);
+  } catch (err) {
+    console.error('API call error:', err);
+    return res.status(500).json({ error: "Failed to generate insight." });
+  }
 };
 
+/* ------------------------- test-only helpers ------------------------ */
 module.exports.__resetRateLimiter = resetRateLimiter;
-module.exports.__getRateLimiterSnapshot = () => ({
-    size: rateLimitBuckets.size
-});
+module.exports.__getRateLimiterSnapshot = () => ({ size: rateLimitBuckets.size });
