@@ -421,7 +421,7 @@
                     <p class="publication-description" data-description="A research paper on developing computational methods for simulating and analyzing protein-ligand binding, which has implications for drug discovery.">A research paper on developing computational methods for simulating and analyzing protein-ligand binding, which has implications for drug discovery.</p>
                 </div>
                 <div class="publication-item bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                    <h4 class="font-bold text-blue-700" data-title="Middle-way flexible docking: Pose prediction using mixed-resolution Monte Carlo in estrogen receptor $\alpha$">Middle-way flexible docking: Pose prediction using mixed-resolution Monte Carlo in estrogen receptor $\alpha$</h4>
+                    <h4 class="font-bold text-blue-700" data-title="Middle-way flexible docking: Pose prediction using mixed-resolution Monte Carlo in estrogen receptor $\alpha$">Middle-way flexible docking: Pose prediction using mixed-resolution Monte Carlo in estrogen receptor α</h4>
                     <p class="text-sm italic mb-2">Published in *PloS one*, 2019</p>
                     <p class="publication-description" data-description="A publication focused on using a combined resolution approach with Monte Carlo simulations to predict the poses of molecules binding to estrogen receptors, a key step in computational drug design.">A publication focused on using a combined resolution approach with Monte Carlo simulations to predict the poses of molecules binding to estrogen receptors, a key step in computational drug design.</p>
                 </div>
@@ -431,9 +431,9 @@
                     <p class="publication-description" data-description="An early career research paper using molecular dynamics to investigate the stability of collagen-like peptides based on their length, highlighting foundational work in molecular simulation.">An early career research paper using molecular dynamics to investigate the stability of collagen-like peptides based on their length, highlighting foundational work in molecular simulation.</p>
                 </div>
                 <div class="publication-item bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                    <h4 class="font-bold text-blue-700" data-title="Exploring the changes in the structure of $\alpha$-helical peptides adsorbed onto a single walled carbon nanotube using classical molecular dynamics simulation">Exploring the changes in the structure of $\alpha$-helical peptides adsorbed onto a single walled carbon nanotube using classical molecular dynamics simulation</h4>
+                    <h4 class="font-bold text-blue-700" data-title="Exploring the changes in the structure of $\alpha$-helical peptides adsorbed onto a single walled carbon nanotube using classical molecular dynamics simulation">Exploring the changes in the structure of α-helical peptides adsorbed onto a single walled carbon nanotube using classical molecular dynamics simulation</h4>
                     <p class="text-sm italic mb-2">Published in *The Journal of Physical Chemistry B*, 2010</p>
-                    <p class="publication-description" data-description="A research article detailing the use of classical molecular dynamics to analyze how the structure of $\alpha$-helical peptides changes when they interact with carbon nanotubes, a topic with applications in bionanotechnology.">A research article detailing the use of classical molecular dynamics to analyze how the structure of $\alpha$-helical peptides changes when they interact with carbon nanotubes, a topic with applications in bionanotechnology.</p>
+                    <p class="publication-description" data-description="A research article detailing the use of classical molecular dynamics to analyze how the structure of α-helical peptides changes when they interact with carbon nanotubes, a topic with applications in bionanotechnology.">A research article detailing the use of classical molecular dynamics to analyze how the structure of α-helical peptides changes when they interact with carbon nanotubes, a topic with applications in bionanotechnology.</p>
                 </div>
             </div>
         </section>
@@ -460,55 +460,81 @@
         const footerContactLink = document.getElementById('footerContactLink');
         const copyEmailBtn = document.getElementById('copyEmailBtn');
 
-        function showMessageBox() {
-            messageBox.classList.remove('hidden');
-            messageBox.classList.add('flex');
-        }
-
-        function hideMessageBox() {
-            messageBox.classList.add('hidden');
-            messageBox.classList.remove('flex');
-        }
-
-        contactLink.addEventListener('click', (e) => {
+        const openMessageBox = (e) => {
             e.preventDefault();
-            showMessageBox();
-        });
+            messageBox.style.display = 'flex';
+        };
 
-        footerContactLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            showMessageBox();
-        });
+        const closeMessageBoxHandler = () => {
+            messageBox.style.display = 'none';
+        };
 
-        closeMessageBox.addEventListener('click', hideMessageBox);
+        contactLink.addEventListener('click', openMessageBox);
+        footerContactLink.addEventListener('click', openMessageBox);
+        closeMessageBox.addEventListener('click', closeMessageBoxHandler);
+        messageBox.addEventListener('click', (e) => {
+            if (e.target === messageBox) {
+                closeMessageBoxHandler();
+            }
+        });
 
         copyEmailBtn.addEventListener('click', () => {
-            const email = document.getElementById('contactEmail').textContent;
-            const tempInput = document.createElement('input');
-            document.body.appendChild(tempInput);
-            tempInput.value = email;
-            tempInput.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempInput);
-            const copyMessage = document.createElement('div');
-            copyMessage.textContent = 'Email copied to clipboard!';
-            copyMessage.className = 'fixed bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-green-500 text-white rounded-md shadow-lg transition-opacity duration-300 opacity-0';
-            document.body.appendChild(copyMessage);
-            setTimeout(() => {
-                copyMessage.classList.remove('opacity-0');
-            }, 10);
-            setTimeout(() => {
-                copyMessage.classList.add('opacity-0');
-                setTimeout(() => document.body.removeChild(copyMessage), 300);
-            }, 2000);
+            const email = document.getElementById('contactEmail').innerText;
+            try {
+                // Use the standard clipboard API
+                navigator.clipboard.writeText(email).then(() => {
+                    const originalText = copyEmailBtn.innerHTML;
+                    copyEmailBtn.innerHTML = 'Copied!';
+                    setTimeout(() => {
+                        copyEmailBtn.innerHTML = originalText;
+                    }, 2000);
+                }).catch(() => {
+                    // Fallback for browsers where clipboard API is not available
+                    const textarea = document.createElement('textarea');
+                    textarea.value = email;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+
+                    const originalText = copyEmailBtn.innerHTML;
+                    copyEmailBtn.innerHTML = 'Copied!';
+                    setTimeout(() => {
+                        copyEmailBtn.innerHTML = originalText;
+                    }, 2000);
+                });
+            } catch (err) {
+                // Fallback for browsers where clipboard API is not available
+                const textarea = document.createElement('textarea');
+                textarea.value = email;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+
+                const originalText = copyEmailBtn.innerHTML;
+                copyEmailBtn.innerHTML = 'Copied!';
+                setTimeout(() => {
+                    copyEmailBtn.innerHTML = originalText;
+                }, 2000);
+            }
         });
 
-        /* --- Interactive Timeline Functionality --- */
-        const timelineItems = document.querySelectorAll('.timeline-item');
-        timelineItems.forEach(item => {
-            item.addEventListener('click', () => {
-                timelineItems.forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
+
+        /* --- Collapsible Functionality (FIXED) --- */
+        const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+
+        collapsibleHeaders.forEach(header => {
+            header.addEventListener('click', () => {
+                const targetId = header.dataset.target;
+                const content = document.querySelector(`[data-content="${targetId}"]`);
+                const icon = header.querySelector('.toggle-icon');
+
+                // Toggle the expanded class on the content
+                content.classList.toggle('expanded');
+
+                // Toggle the rotated class on the icon
+                icon.classList.toggle('rotated');
             });
         });
 
@@ -516,142 +542,154 @@
         const generateBtn = document.getElementById('generateBtn');
         const generateContextBtn = document.getElementById('generateContextBtn');
         const topicInput = document.getElementById('topicInput');
-        const contextSelect = document.getElementById('contextSelect');
         const contextPromptInput = document.getElementById('contextPromptInput');
-        const loadingIndicator = document.getElementById('loadingIndicator');
+        const contextSelect = document.getElementById('contextSelect');
         const resultContainer = document.getElementById('resultContainer');
+        const loadingIndicator = document.getElementById('loadingIndicator');
         const insightText = document.getElementById('insightText');
         const errorContainer = document.getElementById('errorContainer');
         const errorMessage = document.getElementById('errorMessage');
         const copyInsightBtn = document.getElementById('copyInsightBtn');
-        const publications = document.querySelectorAll('.publication-item');
-        const projects = document.querySelectorAll('.project-item');
-        
-        // Collapsible functionality fix
-        document.querySelectorAll('.collapsible-header').forEach(header => {
-            header.addEventListener('click', () => {
-                const targetId = header.getAttribute('data-target');
-                const content = document.querySelector(`.collapsible-content[data-content="${targetId}"]`);
-                const icon = header.querySelector('.toggle-icon');
 
-                if (content && icon) {
-                    content.classList.toggle('expanded');
-                    icon.classList.toggle('rotated');
-                }
-            });
-        });
+        const publications = [
+            { id: 'pub1', title: 'Computational Estimation of Microsecond to Second Atomistic Folding Times', description: 'A research paper on developing computational methods for simulating and analyzing protein-ligand binding, which has implications for drug discovery.' },
+            { id: 'pub2', title: 'Middle-way flexible docking', description: 'A publication focused on using a combined resolution approach with Monte Carlo simulations to predict the poses of molecules binding to estrogen receptors, a key step in computational drug design.' },
+            { id: 'pub3', title: 'Role of length-dependent stability of collagen-like peptides', description: 'An early career research paper using molecular dynamics to investigate the stability of collagen-like peptides based on their length, highlighting foundational work in molecular simulation.' },
+            { id: 'pub4', title: 'Exploring the changes in the structure of α-helical peptides adsorbed onto a single walled carbon nanotube', description: 'A research article detailing the use of classical molecular dynamics to analyze how the structure of α-helical peptides changes when they interact with carbon nanotubes, a topic with applications in bionanotechnology.' }
+        ];
 
-        // Populate the dropdown with projects and publications
-        projects.forEach(proj => {
-            const title = proj.querySelector('.font-bold, .font-semibold').dataset.title;
-            const description = proj.querySelector('.project-description').dataset.description;
-            const option = document.createElement('option');
-            option.value = title;
-            option.textContent = title;
-            option.dataset.context = description;
-            contextSelect.appendChild(option);
-        });
+        const projects = [
+            { id: 'proj1', title: 'AI-Powered Production Rate Prediction', description: 'Developed a machine learning model to predict the production rate of critical assets, enabling proactive adjustments and improving overall output.' },
+            { id: 'proj2', title: 'Unburnt Fuel Prediction Inside Furnace Chambers', description: 'A predictive model that identifies conditions leading to unburnt fuel in furnaces, preventing safety incidents and optimizing fuel efficiency.' },
+            { id: 'proj3', title: 'Corrosion Prediction using Drone Images', description: 'Utilized computer vision and machine learning to analyze drone imagery, automatically detecting and predicting corrosion on industrial equipment.' },
+            { id: 'proj4', title: 'Service Level Prediction Platform', description: 'Developed an AI platform that forecasts service level performance to help with capacity planning and ensuring customer satisfaction.' },
+            { id: 'proj5', title: 'Fraud Detection API', description: 'A microservice API that uses a combination of supervised and unsupervised learning to identify and flag fraudulent transactions in a large financial dataset.' }
+        ];
 
+        // Populate the select dropdown with publications and projects
+        const optgroupPub = document.createElement('optgroup');
+        optgroupPub.label = 'Publications';
         publications.forEach(pub => {
-            const title = pub.querySelector('.font-bold').dataset.title;
-            const description = pub.querySelector('.publication-description').dataset.description;
             const option = document.createElement('option');
-            option.value = title;
-            option.textContent = title;
-            option.dataset.context = description;
-            contextSelect.appendChild(option);
+            option.value = pub.description;
+            option.textContent = pub.title;
+            optgroupPub.appendChild(option);
         });
 
-        // Function to handle the API call to the Vercel serverless function
-        async function fetchInsight(prompt) {
+        const optgroupProj = document.createElement('optgroup');
+        optgroupProj.label = 'Projects';
+        projects.forEach(proj => {
+            const option = document.createElement('option');
+            option.value = proj.description;
+            option.textContent = proj.title;
+            optgroupProj.appendChild(option);
+        });
+
+        contextSelect.appendChild(optgroupPub);
+        contextSelect.appendChild(optgroupProj);
+
+        const generateInsight = async (prompt) => {
             loadingIndicator.classList.remove('hidden');
             resultContainer.classList.add('hidden');
             errorContainer.classList.add('hidden');
 
             try {
-                // The new API endpoint is your Vercel serverless function
-                const apiUrl = '/api/generate-insight';
-
-                let response = await fetch(apiUrl, {
+                const response = await fetch('/api/generate-insight', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt })
                 });
 
                 if (!response.ok) {
-                    let errorData = await response.json();
-                    throw new Error(errorData.details || errorData.error || 'An unknown error occurred.');
+                    const errorData = await response.json();
+                    throw new Error(errorData.details || 'Unknown error');
                 }
 
                 const data = await response.json();
-                const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (text) {
-                    insightText.textContent = text;
+                const insight = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (insight) {
+                    insightText.textContent = insight;
                     resultContainer.classList.remove('hidden');
                 } else {
-                    throw new Error('No content generated from the API.');
+                    throw new Error('No insight generated. Please try again.');
                 }
             } catch (error) {
-                console.error('API call failed:', error);
-                errorMessage.textContent = error.message || 'An unexpected network error occurred.';
+                console.error('Failed to generate insight:', error);
+                errorMessage.textContent = error.message;
                 errorContainer.classList.remove('hidden');
             } finally {
                 loadingIndicator.classList.add('hidden');
             }
-        }
+        };
 
-        // Event listener for general insight generation
-        generateBtn.addEventListener('click', async () => {
+        generateBtn.addEventListener('click', () => {
             const topic = topicInput.value.trim();
-            if (!topic) {
-                errorMessage.textContent = 'Please enter a topic.';
+            if (topic) {
+                const prompt = `Generate a professional thought leadership insight on the topic "${topic}". The insight should be in a single paragraph, suitable for a resume or professional profile.`;
+                generateInsight(prompt);
+            } else {
+                errorMessage.textContent = 'Please enter a topic to generate a general insight.';
                 errorContainer.classList.remove('hidden');
-                return;
             }
-            const prompt = `Act as a world-class AI and Digital Transformation leader and generate a one-paragraph thought leadership insight on the following topic: ${topic}.`;
-            fetchInsight(prompt);
         });
 
-        // Event listener for context-aware insight generation
-        generateContextBtn.addEventListener('click', async () => {
-            const selectedOption = contextSelect.options[contextSelect.selectedIndex];
+        generateContextBtn.addEventListener('click', () => {
+            const context = contextSelect.value;
             const userPrompt = contextPromptInput.value.trim();
-            if (!selectedOption.value || !userPrompt) {
-                errorMessage.textContent = 'Please select a publication or project AND enter a question.';
+            if (context && userPrompt) {
+                const prompt = `Based on the following context: "${context}", generate a professional insight that addresses this question: "${userPrompt}". The insight should be in a single paragraph, suitable for a resume or professional profile.`;
+                generateInsight(prompt);
+            } else {
+                errorMessage.textContent = 'Please select a publication or project and enter a question to generate a context-aware insight.';
                 errorContainer.classList.remove('hidden');
-                return;
             }
-            const topic = selectedOption.value;
-            const context = selectedOption.dataset.context;
-            const prompt = `Act as a world-class AI and Digital Transformation leader. I have a project/publication titled "${topic}" with the following description: "${context}". Please provide a detailed answer to the following question, grounding your response in the provided context: "${userPrompt}".`;
-            fetchInsight(prompt);
+        });
+        
+        // Copy insight text to clipboard
+        copyInsightBtn.addEventListener('click', () => {
+            const textToCopy = insightText.textContent;
+            try {
+                // Use the standard clipboard API
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    const originalText = copyInsightBtn.innerHTML;
+                    copyInsightBtn.innerHTML = 'Copied!';
+                    setTimeout(() => {
+                        copyInsightBtn.innerHTML = originalText;
+                    }, 2000);
+                }).catch(() => {
+                    // Fallback for browsers where clipboard API is not available
+                    const textarea = document.createElement('textarea');
+                    textarea.value = textToCopy;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    
+                    const originalText = copyInsightBtn.innerHTML;
+                    copyInsightBtn.innerHTML = 'Copied!';
+                    setTimeout(() => {
+                        copyInsightBtn.innerHTML = originalText;
+                    }, 2000);
+                });
+            } catch (err) {
+                // Fallback for browsers where clipboard API is not available
+                const textarea = document.createElement('textarea');
+                textarea.value = textToCopy;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                
+                const originalText = copyInsightBtn.innerHTML;
+                copyInsightBtn.innerHTML = 'Copied!';
+                setTimeout(() => {
+                    copyInsightBtn.innerHTML = originalText;
+                }, 2000);
+            }
         });
 
-        // Copy button for the generated insight
-        copyInsightBtn.addEventListener('click', () => {
-            const text = insightText.textContent;
-            const tempInput = document.createElement('textarea');
-            document.body.appendChild(tempInput);
-            tempInput.value = text;
-            tempInput.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempInput);
-            const copyMessage = document.createElement('div');
-            copyMessage.textContent = 'Insight copied!';
-            copyMessage.className = 'fixed bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-green-500 text-white rounded-md shadow-lg transition-opacity duration-300 opacity-0';
-            document.body.appendChild(copyMessage);
-            setTimeout(() => {
-                copyMessage.classList.remove('opacity-0');
-            }, 10);
-            setTimeout(() => {
-                copyMessage.classList.add('opacity-0');
-                setTimeout(() => document.body.removeChild(copyMessage), 300);
-            }, 2000);
-        });
     });
 </script>
-
 </body>
 </html>
