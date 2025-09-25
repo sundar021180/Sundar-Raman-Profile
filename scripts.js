@@ -85,6 +85,31 @@ document.addEventListener('DOMContentLoaded', () => {
     /* --- Section toggles for portfolio and publications --- */
     const sectionToggles = document.querySelectorAll('.section-toggle');
 
+    const expandSectionById = (sectionId) => {
+        if (!sectionId) {
+            return;
+        }
+
+        const section = document.getElementById(sectionId);
+
+        if (!section || !section.hasAttribute('data-collapsible')) {
+            return;
+        }
+
+        const toggleButton = section.querySelector('.section-toggle');
+
+        if (!toggleButton) {
+            return;
+        }
+
+        const targetId = toggleButton.getAttribute('data-target');
+        const targetElement = targetId ? document.getElementById(targetId) : null;
+
+        if (targetElement && targetElement.classList.contains('hidden')) {
+            toggleButton.click();
+        }
+    };
+
     sectionToggles.forEach(button => {
         const targetId = button.getAttribute('data-target');
         const target = document.getElementById(targetId);
@@ -128,6 +153,29 @@ document.addEventListener('DOMContentLoaded', () => {
             updateButtonState();
         });
     });
+
+    const navLinks = document.querySelectorAll('nav a[href^="#"]');
+
+    navLinks.forEach(link => {
+        if (link.id === 'contactLink') {
+            return;
+        }
+
+        link.addEventListener('click', () => {
+            const targetHash = link.getAttribute('href');
+            const sectionId = targetHash ? targetHash.substring(1) : '';
+
+            if (!sectionId) {
+                return;
+            }
+
+            expandSectionById(sectionId);
+        });
+    });
+
+    if (window.location.hash) {
+        expandSectionById(window.location.hash.substring(1));
+    }
 
     /* --- AI Generator Functionality --- */
     const generateBtn = document.getElementById('generateBtn');

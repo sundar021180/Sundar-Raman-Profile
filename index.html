@@ -66,9 +66,28 @@
         </section>
 
         <!-- AI Thought Leadership Generator -->
-        <section id="ai-generator">
-            <h2 class="text-3xl font-bold section-title mb-8">✨ AI Thought Leadership Generator</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <section id="ai-generator" class="collapsible-section" data-collapsible>
+            <div class="section-header flex items-center justify-between gap-4">
+                <h2 class="text-3xl font-bold section-title">✨ AI Thought Leadership Generator</h2>
+                <button
+                    type="button"
+                    class="section-toggle p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    data-target="aiGeneratorContent"
+                    data-label="AI thought leadership generator"
+                    aria-expanded="false"
+                    aria-controls="aiGeneratorContent"
+                >
+                    <span class="sr-only section-toggle-label">Expand AI thought leadership generator</span>
+                    <svg class="icon-expand h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <svg class="icon-collapse h-6 w-6 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                    </svg>
+                </button>
+            </div>
+            <div id="aiGeneratorContent" class="section-content space-y-8 mt-6 hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <!-- Context-Aware Insight Generator -->
                 <div class="bg-white p-0 rounded-lg shadow-md border border-gray-200">
                     <div class="collapsible-header" data-target="context">
@@ -113,16 +132,15 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <div id="loadingIndicator" class="mt-4 text-center text-gray-500 hidden">
+
+                <div id="loadingIndicator" class="text-center text-gray-500 hidden">
                 <svg class="animate-spin h-5 w-5 text-blue-500 inline-block mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 Generating...
             </div>
-            <div id="resultContainer" class="mt-6 p-4 bg-gray-100 rounded-lg hidden">
+            <div id="resultContainer" class="p-4 bg-gray-100 rounded-lg hidden">
                 <h4 class="font-semibold text-gray-800 mb-2">Generated Insight:</h4>
                 <div class="relative group">
                     <p id="insightText" class="text-gray-700 italic pr-12"></p>
@@ -134,16 +152,36 @@
                     </button>
                 </div>
             </div>
-            <div id="errorContainer" class="mt-4 p-4 text-red-700 bg-red-100 rounded-lg hidden">
+            <div id="errorContainer" class="p-4 text-red-700 bg-red-100 rounded-lg hidden">
                 <h4 class="font-semibold">An error occurred:</h4>
                 <p id="errorMessage" class="mt-1"></p>
+            </div>
             </div>
         </section>
 
         <!-- Professional Experience - Interactive Timeline -->
-        <section id="experience">
-            <h2 class="text-3xl font-bold section-title mb-8">Professional Experience</h2>
-            <div id="timeline" class="space-y-8">
+        <section id="experience" class="collapsible-section" data-collapsible>
+            <div class="section-header flex items-center justify-between gap-4">
+                <h2 class="text-3xl font-bold section-title">Professional Experience</h2>
+                <button
+                    type="button"
+                    class="section-toggle p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    data-target="experienceContent"
+                    data-label="professional experience"
+                    aria-expanded="false"
+                    aria-controls="experienceContent"
+                >
+                    <span class="sr-only section-toggle-label">Expand professional experience</span>
+                    <svg class="icon-expand h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <svg class="icon-collapse h-6 w-6 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                    </svg>
+                </button>
+            </div>
+            <div id="experienceContent" class="section-content mt-6 hidden">
+                <div id="timeline" class="space-y-8">
                 <!-- Kimberly-Clark -->
                 <div class="timeline-item group active">
                     <div class="flex justify-between items-start">
@@ -214,13 +252,33 @@
                         </ul>
                     </div>
                 </div>
+                </div>
             </div>
         </section>
 
         <!-- Core Competencies -->
-        <section id="skills">
-            <h2 class="text-3xl font-bold section-title mb-8">Core Competencies</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <section id="skills" class="collapsible-section" data-collapsible>
+            <div class="section-header flex items-center justify-between gap-4">
+                <h2 class="text-3xl font-bold section-title">Core Competencies</h2>
+                <button
+                    type="button"
+                    class="section-toggle p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    data-target="skillsContent"
+                    data-label="core competencies"
+                    aria-expanded="false"
+                    aria-controls="skillsContent"
+                >
+                    <span class="sr-only section-toggle-label">Expand core competencies</span>
+                    <svg class="icon-expand h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <svg class="icon-collapse h-6 w-6 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                    </svg>
+                </button>
+            </div>
+            <div id="skillsContent" class="section-content mt-6 hidden">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- AI Strategy & Digital Transformation -->
                 <div class="bg-gray-50 p-6 rounded-lg shadow-inner">
                     <h3 class="font-semibold text-lg mb-2">AI Strategy & Digital Transformation</h3>
@@ -251,32 +309,56 @@
                     <h3 class="font-semibold text-lg mb-2">Innovation & Thought Leadership</h3>
                     <p class="text-gray-700">Conceptualizing AI Agents, developing thought leadership, and exploring Industry 4.0 applications.</p>
                 </div>
+                </div>
             </div>
         </section>
 
         <!-- Education & Awards -->
-        <section class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-                <h2 class="text-3xl font-bold section-title mb-8">Education</h2>
-                <ul class="space-y-4 text-gray-700">
-                    <li>**PhD, Computational Biology/Biophysics** - University of Madras, Chennai</li>
-                    <li>**MSc, Biophysics & Crystallography** - University of Madras</li>
-                    <li>**BSc, Physics** - TBML College, Bharathidasan University</li>
-                </ul>
+        <section id="education-awards" class="collapsible-section" data-collapsible>
+            <div class="section-header flex items-center justify-between gap-4">
+                <h2 class="text-3xl font-bold section-title">Education &amp; Awards</h2>
+                <button
+                    type="button"
+                    class="section-toggle p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    data-target="educationAwardsContent"
+                    data-label="education and awards"
+                    aria-expanded="false"
+                    aria-controls="educationAwardsContent"
+                >
+                    <span class="sr-only section-toggle-label">Expand education and awards</span>
+                    <svg class="icon-expand h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <svg class="icon-collapse h-6 w-6 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                    </svg>
+                </button>
             </div>
-            <div>
-                <h2 class="text-3xl font-bold section-title mb-8">Awards & Recognition</h2>
-                <ul class="space-y-4 text-gray-700">
-                    <li>Special Recognition Awards - Shell India (2018, 2019)</li>
-                    <li>DAAD Fellowship, Germany (2008)</li>
-                    <li>International Postdoctoral Fellowship - University of Pittsburgh (2012-2015)</li>
-                </ul>
+            <div id="educationAwardsContent" class="section-content mt-6 hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-2xl font-bold section-title">Education</h3>
+                        <ul class="space-y-4 text-gray-700">
+                            <li>**PhD, Computational Biology/Biophysics** - University of Madras, Chennai</li>
+                            <li>**MSc, Biophysics &amp; Crystallography** - University of Madras</li>
+                            <li>**BSc, Physics** - TBML College, Bharathidasan University</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold section-title">Awards &amp; Recognition</h3>
+                        <ul class="space-y-4 text-gray-700">
+                            <li>Special Recognition Awards - Shell India (2018, 2019)</li>
+                            <li>DAAD Fellowship, Germany (2008)</li>
+                            <li>International Postdoctoral Fellowship - University of Pittsburgh (2012-2015)</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </section>
 
         <!-- Project Portfolio -->
-        <section id="portfolio">
-            <div class="flex items-center justify-between gap-4">
+        <section id="portfolio" class="collapsible-section" data-collapsible>
+            <div class="section-header flex items-center justify-between gap-4">
                 <h2 class="text-3xl font-bold section-title">Project Portfolio</h2>
                 <button
                     type="button"
@@ -295,54 +377,56 @@
                     </svg>
                 </button>
             </div>
-            <div id="portfolioContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 hidden">
-                <div class="project-item bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-                    <h3 class="font-bold text-lg mb-2" data-title="AI-Powered Production Rate Prediction">AI-Powered Production Rate Prediction</h3>
-                    <p class="project-description text-gray-700 text-sm mb-4" data-description="Developed a machine learning model to predict the production rate of critical assets, enabling proactive adjustments and improving overall output.">Developed a machine learning model to predict the production rate of critical assets, enabling proactive adjustments and improving overall output.</p>
-                    <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">View Project &rarr;</a>
+            <div id="portfolioContent" class="section-content space-y-6 mt-6 hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="project-item bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                        <h3 class="font-bold text-lg mb-2" data-title="AI-Powered Production Rate Prediction">AI-Powered Production Rate Prediction</h3>
+                        <p class="project-description text-gray-700 text-sm mb-4" data-description="Developed a machine learning model to predict the production rate of critical assets, enabling proactive adjustments and improving overall output.">Developed a machine learning model to predict the production rate of critical assets, enabling proactive adjustments and improving overall output.</p>
+                        <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">View Project &rarr;</a>
+                    </div>
+                    <div class="project-item bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                        <h3 class="font-bold text-lg mb-2" data-title="Unburnt Fuel Prediction Inside Furnace Chambers">Unburnt Fuel Prediction Inside Furnace Chambers</h3>
+                        <p class="project-description text-gray-700 text-sm mb-4" data-description="A predictive model that identifies conditions leading to unburnt fuel in furnaces, preventing safety incidents and optimizing fuel efficiency.">A predictive model that identifies conditions leading to unburnt fuel in furnaces, preventing safety incidents and optimizing fuel efficiency.</p>
+                        <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">View Project &rarr;</a>
+                    </div>
+                    <div class="project-item bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                        <h3 class="font-bold text-lg mb-2" data-title="Corrosion Prediction using Drone Images">Corrosion Prediction using Drone Images</h3>
+                        <p class="project-description text-gray-700 text-sm mb-4" data-description="Utilized computer vision and machine learning to analyze drone imagery, automatically detecting and predicting corrosion on industrial equipment.">Utilized computer vision and machine learning to analyze drone imagery, automatically detecting and predicting corrosion on industrial equipment.</p>
+                        <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">View Project &rarr;</a>
+                    </div>
+                    <div class="project-item bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                        <h3 class="font-bold text-lg mb-2" data-title="Service Level Prediction Platform">Service Level Prediction Platform</h3>
+                        <p class="project-description text-gray-700 text-sm mb-4" data-description="Developed an AI platform that forecasts service level performance to help with capacity planning and ensuring customer satisfaction.">Developed an AI platform that forecasts service level performance to help with capacity planning and ensuring customer satisfaction.</p>
+                        <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">View Project &rarr;</a>
+                    </div>
+                    <div class="project-item bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                        <h3 class="font-bold text-lg mb-2" data-title="Fraud Detection API">Fraud Detection API</h3>
+                        <p class="project-description text-gray-700 text-sm mb-4" data-description="A microservice API that uses a combination of supervised and unsupervised learning to identify and flag fraudulent transactions in a large financial dataset.">A microservice API that uses a combination of supervised and unsupervised learning to identify and flag fraudulent transactions in a large financial dataset.</p>
+                        <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">View Project &rarr;</a>
+                    </div>
                 </div>
-                <div class="project-item bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-                    <h3 class="font-bold text-lg mb-2" data-title="Unburnt Fuel Prediction Inside Furnace Chambers">Unburnt Fuel Prediction Inside Furnace Chambers</h3>
-                    <p class="project-description text-gray-700 text-sm mb-4" data-description="A predictive model that identifies conditions leading to unburnt fuel in furnaces, preventing safety incidents and optimizing fuel efficiency.">A predictive model that identifies conditions leading to unburnt fuel in furnaces, preventing safety incidents and optimizing fuel efficiency.</p>
-                    <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">View Project &rarr;</a>
-                </div>
-                <div class="project-item bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-                    <h3 class="font-bold text-lg mb-2" data-title="Corrosion Prediction using Drone Images">Corrosion Prediction using Drone Images</h3>
-                    <p class="project-description text-gray-700 text-sm mb-4" data-description="Utilized computer vision and machine learning to analyze drone imagery, automatically detecting and predicting corrosion on industrial equipment.">Utilized computer vision and machine learning to analyze drone imagery, automatically detecting and predicting corrosion on industrial equipment.</p>
-                    <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">View Project &rarr;</a>
-                </div>
-                <div class="project-item bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-                    <h3 class="font-bold text-lg mb-2" data-title="Service Level Prediction Platform">Service Level Prediction Platform</h3>
-                    <p class="project-description text-gray-700 text-sm mb-4" data-description="Developed an AI platform that forecasts service level performance to help with capacity planning and ensuring customer satisfaction.">Developed an AI platform that forecasts service level performance to help with capacity planning and ensuring customer satisfaction.</p>
-                    <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">View Project &rarr;</a>
-                </div>
-                <div class="project-item bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-                    <h3 class="font-bold text-lg mb-2" data-title="Fraud Detection API">Fraud Detection API</h3>
-                    <p class="project-description text-gray-700 text-sm mb-4" data-description="A microservice API that uses a combination of supervised and unsupervised learning to identify and flag fraudulent transactions in a large financial dataset.">A microservice API that uses a combination of supervised and unsupervised learning to identify and flag fraudulent transactions in a large financial dataset.</p>
-                    <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">View Project &rarr;</a>
-                </div>
-            </div>
-            <div id="projectInsightArea" class="mt-8 space-y-4">
-                <div id="projectLoadingIndicator" class="hidden text-sm text-gray-500 flex items-center gap-2">
-                    <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>Generating project insight...</span>
-                </div>
-                <div id="projectInsightContainer" class="hidden p-4 bg-blue-50 border border-blue-100 rounded-lg">
-                    <h4 id="projectInsightTitle" class="font-semibold text-blue-900">Project Insight</h4>
-                    <p id="projectInsightText" class="mt-2 text-sm text-blue-900"></p>
-                </div>
-                <div id="projectErrorContainer" class="hidden p-4 bg-red-100 border border-red-200 rounded-lg">
-                    <p id="projectErrorMessage" class="text-sm text-red-700"></p>
+                <div id="projectInsightArea" class="space-y-4">
+                    <div id="projectLoadingIndicator" class="hidden text-sm text-gray-500 flex items-center gap-2">
+                        <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Generating project insight...</span>
+                    </div>
+                    <div id="projectInsightContainer" class="hidden p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                        <h4 id="projectInsightTitle" class="font-semibold text-blue-900">Project Insight</h4>
+                        <p id="projectInsightText" class="mt-2 text-sm text-blue-900"></p>
+                    </div>
+                    <div id="projectErrorContainer" class="hidden p-4 bg-red-100 border border-red-200 rounded-lg">
+                        <p id="projectErrorMessage" class="text-sm text-red-700"></p>
+                    </div>
                 </div>
             </div>
         </section>
 
         <!-- Academic Publications -->
-        <section id="publications">
-            <div class="flex items-center justify-between gap-4">
+        <section id="publications" class="collapsible-section" data-collapsible>
+            <div class="section-header flex items-center justify-between gap-4">
                 <h2 class="text-3xl font-bold section-title">Academic Publications <span class="text-sm font-normal text-gray-500">(22+ publications)</span></h2>
                 <button
                     type="button"
@@ -361,7 +445,7 @@
                     </svg>
                 </button>
             </div>
-            <div id="publicationsContent" class="space-y-6 text-gray-700 mt-6 hidden">
+            <div id="publicationsContent" class="section-content space-y-6 text-gray-700 mt-6 hidden">
                 <p class="text-gray-600 italic">A selection of my most notable publications is listed below. For a complete list, please contact me.</p>
                 <div class="publication-item bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                     <h4 class="font-bold text-blue-700" data-title="Computational Estimation of Microsecond to Second Atomistic Folding Times">Computational Estimation of Microsecond to Second Atomistic Folding Times</h4>
@@ -407,7 +491,7 @@
                         </svg>
                     </button>
                 </div>
-                <div id="publicationInsightArea" class="mt-8 space-y-4">
+                <div id="publicationInsightArea" class="space-y-4">
                     <div id="publicationLoadingIndicator" class="hidden text-sm text-gray-500 flex items-center gap-2">
                         <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
