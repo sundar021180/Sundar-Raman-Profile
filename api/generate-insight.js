@@ -5,15 +5,25 @@
  */
 
 // Define the API endpoint and model.
+const crypto = require('node:crypto');
+
 const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
 
 const MAX_PROMPT_LENGTH = 4000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
+const DEFAULT_MAX_RETRIES = 1;
 
 const rateLimitBuckets = new Map();
+let lastRateLimitSweepAt = 0;
 
 const defaultRateLimitConfig = {
     maxRequests: 5,
     windowMs: 60_000
+};
+
+const defaultRequestConfig = {
+    timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS,
+    maxRetries: DEFAULT_MAX_RETRIES
 };
 
 const getRateLimitConfig = () => {
@@ -26,7 +36,39 @@ const getRateLimitConfig = () => {
     };
 };
 
-const getClientKey = (req) => {
+const getRequestConfig = () => {
+    const timeoutMs = Number(process.env.GENERATE_INSIGHT_TIMEOUT_MS ?? defaultRequestConfig.timeoutMs);
+    const maxRetries = Number(process.env.GENERATE_INSIGHT_MAX_RETRIES ?? defaultRequestConfig.maxRetries);
+
+    return {
+        timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : defaultRequestConfig.timeoutMs,
+        maxRetries: Number.isFinite(maxRetries) && maxRetries >= 0 ? Math.min(maxRetries, 3) : defaultRequestConfig.maxRetries
+    };
+};
+
+const getAccessTokenFromHeader = (req) => {
+    const rawHeader = req.headers?.authorization || req.headers?.Authorization;
+    if (typeof rawHeader !== 'string') {
+        return null;
+    }
+
+    const match = rawHeader.match(/^Bearer\s+(.+)$/i);
+    if (!match) {
+        return null;
+    }
+
+    return match[1].trim();
+};
+
+const hashToken = (token) => {
+    return crypto.createHash('sha256').update(token).digest('hex');
+};
+
+const getClientKey = (req, hashedToken) => {
+    if (hashedToken) {
+        return `token:${hashedToken}`;
+    }
+
     const forwardedFor = req.headers['x-forwarded-for'];
     if (typeof forwardedFor === 'string' && forwardedFor.trim().length > 0) {
         return forwardedFor.split(',')[0].trim();
@@ -35,10 +77,26 @@ const getClientKey = (req) => {
     return req.socket?.remoteAddress || 'unknown';
 };
 
+const pruneExpiredRateLimitBuckets = (now = Date.now()) => {
+    if (now - lastRateLimitSweepAt < 60_000) {
+        return;
+    }
+
+    lastRateLimitSweepAt = now;
+
+    for (const [key, bucket] of rateLimitBuckets.entries()) {
+        if (bucket.expiresAt <= now) {
+            rateLimitBuckets.delete(key);
+        }
+    }
+};
+
 const isRateLimited = (clientKey, config, now = Date.now()) => {
     if (!config.maxRequests || config.maxRequests < 0) {
         return false;
     }
+
+    pruneExpiredRateLimitBuckets(now);
 
     const existingBucket = rateLimitBuckets.get(clientKey);
 
@@ -85,18 +143,97 @@ const parseAllowedOrigins = () => {
     );
 };
 
+const parseAccessTokens = () => {
+    const { GENERATE_INSIGHT_ACCESS_TOKENS } = process.env;
+    if (!GENERATE_INSIGHT_ACCESS_TOKENS) {
+        return new Set();
+    }
+
+    return new Set(
+        GENERATE_INSIGHT_ACCESS_TOKENS
+            .split(',')
+            .map((token) => token.trim())
+            .filter(Boolean)
+    );
+};
+
+const fetchWithTimeout = async (url, options, timeoutMs) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        controller.abort();
+    }, timeoutMs);
+
+    try {
+        return await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+    } finally {
+        clearTimeout(timeoutId);
+    }
+};
+
+const callGeminiWithRetry = async (payload, apiKey, requestConfig) => {
+    const { timeoutMs, maxRetries } = requestConfig;
+    const requestInit = {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    };
+
+    let attempt = 0;
+    let lastError;
+
+    while (attempt <= maxRetries) {
+        attempt += 1;
+        try {
+            const response = await fetchWithTimeout(`${API_URL}?key=${apiKey}`, requestInit, timeoutMs);
+            if (!response.ok) {
+                const errorText = await response.text().catch(() => '');
+                console.warn('Gemini API returned non-OK response', response.status, errorText);
+
+                if (response.status >= 500 && attempt <= maxRetries) {
+                    continue;
+                }
+
+                throw new Error('Upstream request failed.');
+            }
+
+            return response.json();
+        } catch (error) {
+            lastError = error;
+
+            if (error.name === 'AbortError') {
+                console.warn('Gemini request aborted due to timeout.');
+            }
+
+            const isRetryable = error.name === 'AbortError' || error.name === 'FetchError' || error.message === 'Upstream request failed.';
+            if (!isRetryable || attempt > maxRetries) {
+                throw lastError;
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 200 * attempt));
+        }
+    }
+
+    throw lastError || new Error('Failed to contact Gemini API.');
+};
+
 module.exports = async (req, res) => {
     const allowedOrigins = parseAllowedOrigins();
     const requestOrigin = req.headers.origin;
 
     if (allowedOrigins.size === 0) {
-        if (requestOrigin) {
-            console.warn('No ALLOWED_ORIGINS configured. Falling back to request origin.');
-            allowedOrigins.add(requestOrigin);
-        } else {
-            console.warn('No ALLOWED_ORIGINS configured and no request origin provided. Allowing all origins.');
-            allowedOrigins.add('*');
-        }
+        console.error('ALLOWED_ORIGINS is not configured. Rejecting request.');
+        res.status(500).json({ error: "CORS configuration is missing on the server." });
+        return;
+    }
+
+    if (!requestOrigin && !allowedOrigins.has('*')) {
+        res.status(403).json({ error: "Origin not allowed." });
+        return;
     }
 
     if (requestOrigin && !allowedOrigins.has(requestOrigin) && !allowedOrigins.has('*')) {
@@ -106,7 +243,7 @@ module.exports = async (req, res) => {
 
     if (allowedOrigins.has('*')) {
         res.setHeader('Access-Control-Allow-Origin', '*');
-    } else if (requestOrigin) {
+    } else if (requestOrigin && allowedOrigins.has(requestOrigin)) {
         res.setHeader('Access-Control-Allow-Origin', requestOrigin);
     }
     res.setHeader('Vary', 'Origin');
@@ -121,6 +258,20 @@ module.exports = async (req, res) => {
         return;
     }
 
+    const accessTokens = parseAccessTokens();
+    if (accessTokens.size === 0) {
+        console.error('GENERATOR access tokens missing.');
+        return res.status(500).json({ error: "Access token configuration is missing on the server." });
+    }
+
+    const rawAccessToken = getAccessTokenFromHeader(req);
+    if (!rawAccessToken || !accessTokens.has(rawAccessToken)) {
+        console.info('Rejected request due to missing or invalid access token.');
+        return res.status(401).json({ error: "A valid access token is required." });
+    }
+
+    const hashedToken = hashToken(rawAccessToken);
+
     // Get the API key from the environment variables.
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -134,13 +285,14 @@ module.exports = async (req, res) => {
         return res.status(405).json({ error: "Method Not Allowed" });
     }
 
-    const clientKey = getClientKey(req);
+    const clientKey = getClientKey(req, hashedToken);
     const rateLimitConfig = getRateLimitConfig();
     const now = Date.now();
 
     if (isRateLimited(clientKey, rateLimitConfig, now)) {
         const retryAfterSeconds = secondsUntilReset(clientKey, now) || Math.ceil(rateLimitConfig.windowMs / 1000);
         res.setHeader('Retry-After', retryAfterSeconds);
+        console.info('Rate limit exceeded for client', clientKey, 'retry after', retryAfterSeconds);
         return res.status(429).json({ error: "Too many requests. Please slow down." });
     }
 
@@ -161,7 +313,6 @@ module.exports = async (req, res) => {
             return res.status(413).json({ error: "Prompt is too long." });
         }
 
-        // Prepare the payload for the Gemini API call.
         const payload = {
             contents: [{
                 parts: [{
@@ -169,25 +320,9 @@ module.exports = async (req, res) => {
                 }]
             }]
         };
+        const requestConfig = getRequestConfig();
 
-        // Make the POST request to the Gemini API.
-        const apiResponse = await fetch(`${API_URL}?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload)
-        });
-
-        // Handle API errors.
-        if (!apiResponse.ok) {
-            const errorText = await apiResponse.text();
-            console.warn('Gemini API returned non-OK response', apiResponse.status, errorText);
-            throw new Error('Upstream request failed.');
-        }
-
-        // Send the JSON response back to the client.
-        const data = await apiResponse.json();
+        const data = await callGeminiWithRetry(payload, GEMINI_API_KEY, requestConfig);
         res.status(200).json(data);
 
     } catch (error) {
@@ -197,3 +332,6 @@ module.exports = async (req, res) => {
 };
 
 module.exports.__resetRateLimiter = resetRateLimiter;
+module.exports.__getRateLimiterSnapshot = () => ({
+    size: rateLimitBuckets.size
+});
