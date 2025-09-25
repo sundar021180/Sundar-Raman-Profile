@@ -9,6 +9,68 @@ const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-
 
 const MAX_PROMPT_LENGTH = 4000;
 
+const rateLimitBuckets = new Map();
+
+const defaultRateLimitConfig = {
+    maxRequests: 5,
+    windowMs: 60_000
+};
+
+const getRateLimitConfig = () => {
+    const maxRequests = Number(process.env.GENERATE_INSIGHT_MAX_REQUESTS ?? defaultRateLimitConfig.maxRequests);
+    const windowMs = Number(process.env.GENERATE_INSIGHT_WINDOW_MS ?? defaultRateLimitConfig.windowMs);
+
+    return {
+        maxRequests: Number.isFinite(maxRequests) ? maxRequests : defaultRateLimitConfig.maxRequests,
+        windowMs: Number.isFinite(windowMs) && windowMs > 0 ? windowMs : defaultRateLimitConfig.windowMs
+    };
+};
+
+const getClientKey = (req) => {
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (typeof forwardedFor === 'string' && forwardedFor.trim().length > 0) {
+        return forwardedFor.split(',')[0].trim();
+    }
+
+    return req.socket?.remoteAddress || 'unknown';
+};
+
+const isRateLimited = (clientKey, config, now = Date.now()) => {
+    if (!config.maxRequests || config.maxRequests < 0) {
+        return false;
+    }
+
+    const existingBucket = rateLimitBuckets.get(clientKey);
+
+    if (!existingBucket || existingBucket.expiresAt <= now) {
+        rateLimitBuckets.set(clientKey, {
+            count: 1,
+            expiresAt: now + config.windowMs
+        });
+        return false;
+    }
+
+    if (existingBucket.count >= config.maxRequests) {
+        return true;
+    }
+
+    existingBucket.count += 1;
+    return false;
+};
+
+const secondsUntilReset = (clientKey, now = Date.now()) => {
+    const bucket = rateLimitBuckets.get(clientKey);
+    if (!bucket) {
+        return 0;
+    }
+
+    return Math.max(0, Math.ceil((bucket.expiresAt - now) / 1000));
+};
+
+const resetRateLimiter = () => {
+    rateLimitBuckets.clear();
+};
+
 const parseAllowedOrigins = () => {
     const { ALLOWED_ORIGINS } = process.env;
     if (!ALLOWED_ORIGINS) {
@@ -55,16 +117,10 @@ module.exports = async (req, res) => {
 
     // Get the API key from the environment variables.
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    const EXPECTED_ACCESS_TOKEN = process.env.GENERATE_INSIGHT_TOKEN;
 
     // Check if the API key is present.
     if (!GEMINI_API_KEY) {
         return res.status(500).json({ error: "API key is not configured." });
-    }
-
-    if (!EXPECTED_ACCESS_TOKEN) {
-        console.warn('Missing GENERATE_INSIGHT_TOKEN; refusing to serve unsecured requests.');
-        return res.status(500).json({ error: "Server misconfiguration." });
     }
 
     // Ensure the request method is POST.
@@ -72,9 +128,14 @@ module.exports = async (req, res) => {
         return res.status(405).json({ error: "Method Not Allowed" });
     }
 
-    const providedToken = req.headers.authorization;
-    if (!providedToken || providedToken !== `Bearer ${EXPECTED_ACCESS_TOKEN}`) {
-        return res.status(401).json({ error: "Unauthorized." });
+    const clientKey = getClientKey(req);
+    const rateLimitConfig = getRateLimitConfig();
+    const now = Date.now();
+
+    if (isRateLimited(clientKey, rateLimitConfig, now)) {
+        const retryAfterSeconds = secondsUntilReset(clientKey, now) || Math.ceil(rateLimitConfig.windowMs / 1000);
+        res.setHeader('Retry-After', retryAfterSeconds);
+        return res.status(429).json({ error: "Too many requests. Please slow down." });
     }
 
     try {
@@ -128,3 +189,5 @@ module.exports = async (req, res) => {
         res.status(500).json({ error: "Failed to generate insight." });
     }
 };
+
+module.exports.__resetRateLimiter = resetRateLimiter;
