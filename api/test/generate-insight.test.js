@@ -1,6 +1,8 @@
 const { test, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 
+const path = require('node:path');
+
 const handler = require('../generate-insight');
 
 const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent';
@@ -377,6 +379,36 @@ test('rejects requests without an access token', async () => {
 
     assert.deepEqual(res.statusCalls, [401]);
     assert.deepEqual(res.jsonPayloads[0], { error: 'A valid access token is required.' });
+});
+
+test('loads access tokens from configured file when environment variable is absent', async () => {
+    delete process.env.GENERATE_INSIGHT_ACCESS_TOKENS;
+    process.env.GENERATE_INSIGHT_ACCESS_TOKENS_FILE = path.join(__dirname, 'fixtures/access-tokens.json');
+    process.env.GEMINI_API_KEY = 'key';
+
+    const expectedPayload = { data: 'file-token' };
+
+    global.fetch = async () => ({
+        ok: true,
+        json: async () => expectedPayload
+    });
+
+    const req = {
+        method: 'POST',
+        headers: {
+            origin: 'https://allowed.example',
+            'content-type': 'application/json',
+            authorization: 'Bearer fixture-token'
+        },
+        body: { prompt: 'Hello' }
+    };
+
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    assert.deepEqual(res.statusCalls, [200]);
+    assert.deepEqual(res.body, expectedPayload);
 });
 
 test('rejects requests with an invalid access token', async () => {
