@@ -152,7 +152,7 @@ const createRequest = async ({
 
   if (!token) {
     setLoading(loadingElement, false);
-    showError(errorElement, errorMessageElement, 'An access token is required before generating insights.');
+    showError(errorElement, errorMessageElement, 'Please enter your Gemini API key before generating insights.');
     return;
   }
 
@@ -160,8 +160,8 @@ const createRequest = async ({
     const response = await fetcher('/api/generate-insight', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
+         'Content-Type': 'application/json',
+         'X-Gemini-Api-Key': token
       },
       body: JSON.stringify({ prompt })
     });
