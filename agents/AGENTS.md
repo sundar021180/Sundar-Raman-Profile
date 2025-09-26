@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Scope
-These instructions apply to the entire `Sundar-Raman-Profile` repository. If you add new subdirectories, check whether they introduce their own `AGENTS.md`; the most specific file (closest to the file you are editing) always takes precedence. When in doubt, run `find . -name AGENTS.md` from the repository root and read every file whose scope overlaps your changes.
+These instructions apply to the entire `Sundar-Raman-Profile` repository. If you add new subdirectories, check whether they introduce their own `AGENTS.md` and place all AGENTS files in ./agents folder; the most specific file (closest to the file you are editing) always takes precedence. When in doubt, run `find . -name AGENTS.md` from the repository root and read every file whose scope overlaps your changes.
 
 ## Quick Start
 - Use Node.js 18 or newer.
@@ -36,12 +36,13 @@ These instructions apply to the entire `Sundar-Raman-Profile` repository. If you
 - Never delete an `AGENTS.md` without replacing it with updated guidance and explaining the reasoning in your commit message or PR description.
 
 ## Testing & Validation
+- The test directory is located at ./test
 - Run `npm run start` in `api/` to confirm the API bootstraps without runtime errors whenever you modify server-side code.
 - For front-end changes, open `index.html` in a browser and perform a basic smoke test (navigation, collapsible sections, and copy-to-clipboard interactions).
 - Ensure `git status` is clean before requesting review.
 
 ### Testing Standards
-- Use Node's built-in test runner (`npm test` from the `api/` directory) for serverless functions. Keep tests under `api/test/` and name files with the `.test.js` suffix.
+- Use Node's built-in test runner (`npm test` from the `api/` directory) for serverless functions. Keep tests under `./test/` and name files with the `.test.js` suffix.
 - Prefer explicit request/response mocks that assert status codes, headers, and payloads so regression cases remain clear to future contributors.
 - Cover both success paths and common failure scenarios (authentication, validation, upstream errors) when adding new logic.
 - When stubbing globals such as `fetch`, always restore the original implementation in `beforeEach`/`afterEach` hooks to avoid cross-test pollution.
