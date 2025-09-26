@@ -1,0 +1,10 @@
+{
+  "builds": [
+    { "src": "public/**", "use": "@vercel/static" },
+    { "src": "generate-insight.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/api/generate-insight", "dest": "/generate-insight.js" },
+    { "src": "/(.*)", "dest": "/public/$1" }
+  ]
+}
