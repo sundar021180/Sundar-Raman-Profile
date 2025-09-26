@@ -40,11 +40,11 @@ function createMockResponse() {
     };
 }
 
-const VALID_TOKEN = 'valid-token';
+const CLIENT_GEMINI_KEY = 'client-provided-key';
 
-const authorize = (headers = {}) => ({
+const withGeminiKey = (headers = {}) => ({
     ...headers,
-    authorization: `Bearer ${VALID_TOKEN}`
+    'x-gemini-api-key': CLIENT_GEMINI_KEY
 });
 
 beforeEach(() => {
@@ -56,7 +56,6 @@ beforeEach(() => {
         delete global.fetch;
     }
 
-    process.env.GENERATE_INSIGHT_ACCESS_TOKENS = VALID_TOKEN;
     process.env.ALLOWED_ORIGINS = 'https://allowed.example';
 });
 
@@ -72,7 +71,6 @@ afterEach(() => {
 
 test('rejects requests when ALLOWED_ORIGINS is missing in production', async () => {
     delete process.env.ALLOWED_ORIGINS;
-    process.env.GEMINI_API_KEY = 'test-key';
     process.env.NODE_ENV = 'production';
     process.env.VERCEL_ENV = 'production';
 
@@ -83,7 +81,7 @@ test('rejects requests when ALLOWED_ORIGINS is missing in production', async () 
 
     const req = {
         method: 'POST',
-        headers: authorize({
+        headers: withGeminiKey({
             origin: 'https://profile.example',
             'content-type': 'application/json'
         }),
@@ -99,7 +97,6 @@ test('rejects requests when ALLOWED_ORIGINS is missing in production', async () 
 
 test('rejects requests when VERCEL_ENV uses different casing for production', async () => {
     delete process.env.ALLOWED_ORIGINS;
-    process.env.GEMINI_API_KEY = 'test-key';
     process.env.VERCEL_ENV = 'Production';
 
     global.fetch = async () => ({
@@ -109,7 +106,7 @@ test('rejects requests when VERCEL_ENV uses different casing for production', as
 
     const req = {
         method: 'POST',
-        headers: authorize({
+        headers: withGeminiKey({
             origin: 'https://profile.example',
             'content-type': 'application/json'
         }),
@@ -123,7 +120,9 @@ test('rejects requests when VERCEL_ENV uses different casing for production', as
     assert.deepEqual(res.jsonPayloads[0], { error: 'CORS configuration is missing on the server.' });
 });
 
-    process.env.GENERATE_INSIGHT_ACCESS_TOKENS = VALID_TOKEN;
+test('allows requests when ALLOWED_ORIGINS includes a wildcard', async () => {
+    process.env.ALLOWED_ORIGINS = '*';
+
     const expectedPayload = { data: 'ok' };
 
     global.fetch = async () => ({
@@ -133,7 +132,7 @@ test('rejects requests when VERCEL_ENV uses different casing for production', as
 
     const req = {
         method: 'POST',
-        headers: authorize({
+        headers: withGeminiKey({
             origin: 'https://profile.example',
             'content-type': 'application/json'
         }),
@@ -148,11 +147,10 @@ test('rejects requests when VERCEL_ENV uses different casing for production', as
     assert.deepEqual(res.body, expectedPayload);
 });
 
-test('allows requests without access tokens outside production', async () => {
-    delete process.env.GENERATE_INSIGHT_ACCESS_TOKENS;
+test('allows requests outside production when ALLOWED_ORIGINS is not set', async () => {
+    delete process.env.ALLOWED_ORIGINS;
     delete process.env.NODE_ENV;
     delete process.env.VERCEL_ENV;
-    process.env.GEMINI_API_KEY = 'key';
 
     const expectedPayload = { ok: true };
 
@@ -163,10 +161,10 @@ test('allows requests without access tokens outside production', async () => {
 
     const req = {
         method: 'POST',
-        headers: {
+        headers: withGeminiKey({
             origin: 'https://allowed.example',
             'content-type': 'application/json'
-        },
+        }),
         body: { prompt: 'Hello' }
     };
     const res = createMockResponse();
@@ -180,9 +178,9 @@ test('allows requests without access tokens outside production', async () => {
 test('rejects requests from disallowed origins', async () => {
     const req = {
         method: 'POST',
-        headers: {
+        headers: withGeminiKey({
             origin: 'https://evil.example'
-        }
+        })
     };
     const res = createMockResponse();
 
@@ -208,38 +206,31 @@ test('handles OPTIONS preflight requests with proper headers', async () => {
     assert.equal(res.getHeader('Access-Control-Allow-Origin'), 'https://allowed.example');
     assert.equal(res.getHeader('Vary'), 'Origin');
     assert.equal(res.getHeader('Access-Control-Allow-Methods'), 'POST, OPTIONS');
-    assert.equal(res.getHeader('Access-Control-Allow-Headers'), 'Content-Type, Authorization');
+    assert.equal(res.getHeader('Access-Control-Allow-Headers'), 'Content-Type, Authorization, X-Gemini-Api-Key');
     assert.equal(res.getHeader('Access-Control-Max-Age'), '600');
 });
 
-test('returns 500 when GEMINI_API_KEY is missing', async () => {
-    delete process.env.GEMINI_API_KEY;
-
+test('returns 401 when Gemini API key header is missing', async () => {
     const req = {
         method: 'POST',
-        headers: authorize({
+        headers: {
             origin: 'https://allowed.example',
             'content-type': 'application/json'
-        }),
+        },
         body: { prompt: 'Hello' }
     };
     const res = createMockResponse();
 
     await handler(req, res);
 
-    assert.deepEqual(res.statusCalls, [500]);
-    assert.deepEqual(res.jsonPayloads[0], {
-        error: 'Gemini API key is not configured. Set GEMINI_API_KEY with your Gemini key only.',
-        docs: 'https://ai.google.dev/gemini-api/docs/api-key'
-    });
+    assert.deepEqual(res.statusCalls, [401]);
+    assert.deepEqual(res.jsonPayloads[0], { error: 'Gemini API key is required.' });
 });
 
 test('rejects non-POST methods', async () => {
-    process.env.GEMINI_API_KEY = 'key';
-
     const req = {
         method: 'GET',
-        headers: authorize({
+        headers: withGeminiKey({
             origin: 'https://allowed.example'
         })
     };
@@ -252,11 +243,9 @@ test('rejects non-POST methods', async () => {
 });
 
 test('rejects unsupported content types', async () => {
-    process.env.GEMINI_API_KEY = 'key';
-
     const req = {
         method: 'POST',
-        headers: authorize({
+        headers: withGeminiKey({
             origin: 'https://allowed.example',
             'content-type': 'text/plain'
         }),
@@ -271,11 +260,9 @@ test('rejects unsupported content types', async () => {
 });
 
 test('validates presence of prompt', async () => {
-    process.env.GEMINI_API_KEY = 'key';
-
     const req = {
         method: 'POST',
-        headers: authorize({
+        headers: withGeminiKey({
             origin: 'https://allowed.example',
             'content-type': 'application/json'
         }),
@@ -290,11 +277,9 @@ test('validates presence of prompt', async () => {
 });
 
 test('enforces prompt length limits', async () => {
-    process.env.GEMINI_API_KEY = 'key';
-
     const req = {
         method: 'POST',
-        headers: authorize({
+        headers: withGeminiKey({
             origin: 'https://allowed.example',
             'content-type': 'application/json'
         }),
@@ -309,8 +294,6 @@ test('enforces prompt length limits', async () => {
 });
 
 test('propagates upstream errors from Gemini', async () => {
-    process.env.GEMINI_API_KEY = 'key';
-
     global.fetch = async () => ({
         ok: false,
         status: 502,
@@ -319,7 +302,7 @@ test('propagates upstream errors from Gemini', async () => {
 
     const req = {
         method: 'POST',
-        headers: authorize({
+        headers: withGeminiKey({
             origin: 'https://allowed.example',
             'content-type': 'application/json'
         }),
@@ -334,8 +317,6 @@ test('propagates upstream errors from Gemini', async () => {
 });
 
 test('returns Gemini response payload on success', async () => {
-    process.env.GEMINI_API_KEY = 'key';
-
     const expectedPayload = { contents: [{ parts: [{ text: 'Insight' }] }] };
     const fetchCalls = [];
 
@@ -349,7 +330,7 @@ test('returns Gemini response payload on success', async () => {
 
     const req = {
         method: 'POST',
-        headers: authorize({
+        headers: withGeminiKey({
             origin: 'https://allowed.example',
             'content-type': 'application/json'
         }),
@@ -363,7 +344,7 @@ test('returns Gemini response payload on success', async () => {
     assert.equal(res.getHeader('Access-Control-Allow-Origin'), 'https://allowed.example');
     assert.deepEqual(res.body, expectedPayload);
     assert.equal(fetchCalls.length, 1);
-    assert.equal(fetchCalls[0][0], `${API_URL}?key=key`);
+    assert.equal(fetchCalls[0][0], `${API_URL}?key=${CLIENT_GEMINI_KEY}`);
     const fetchOptions = fetchCalls[0][1];
     assert.equal(fetchOptions.method, 'POST');
     assert.equal(fetchOptions.headers['Content-Type'], 'application/json');
@@ -376,7 +357,6 @@ test('returns Gemini response payload on success', async () => {
 });
 
 test('limits repeated requests from the same client', async () => {
-    process.env.GEMINI_API_KEY = 'key';
     process.env.GENERATE_INSIGHT_MAX_REQUESTS = '2';
     process.env.GENERATE_INSIGHT_WINDOW_MS = '1000';
 
@@ -387,7 +367,7 @@ test('limits repeated requests from the same client', async () => {
 
     const baseRequest = {
         method: 'POST',
-        headers: authorize({
+        headers: withGeminiKey({
             origin: 'https://allowed.example',
             'content-type': 'application/json',
             'x-forwarded-for': '1.2.3.4'
@@ -410,48 +390,7 @@ test('limits repeated requests from the same client', async () => {
     assert.ok(limited.getHeader('Retry-After'));
 });
 
-test('rejects requests without an access token', async () => {
-    process.env.GEMINI_API_KEY = 'key';
-
-    const req = {
-        method: 'POST',
-        headers: {
-            origin: 'https://allowed.example',
-            'content-type': 'application/json'
-        },
-        body: { prompt: 'Hello' }
-    };
-    const res = createMockResponse();
-
-    await handler(req, res);
-
-    assert.deepEqual(res.statusCalls, [401]);
-    assert.deepEqual(res.jsonPayloads[0], { error: 'A valid access token is required.' });
-});
-
-test('rejects requests with an invalid access token', async () => {
-    process.env.GEMINI_API_KEY = 'key';
-
-    const req = {
-        method: 'POST',
-        headers: {
-            origin: 'https://allowed.example',
-            'content-type': 'application/json',
-            authorization: 'Bearer nope'
-        },
-        body: { prompt: 'Hello' }
-    };
-    const res = createMockResponse();
-
-    await handler(req, res);
-
-    assert.deepEqual(res.statusCalls, [401]);
-    assert.deepEqual(res.jsonPayloads[0], { error: 'A valid access token is required.' });
-});
-
 test('retries Gemini calls on transient failures', async () => {
-    process.env.GEMINI_API_KEY = 'key';
-
     const expectedPayload = { data: true };
     let attempts = 0;
 
@@ -473,7 +412,7 @@ test('retries Gemini calls on transient failures', async () => {
 
     const req = {
         method: 'POST',
-        headers: authorize({
+        headers: withGeminiKey({
             origin: 'https://allowed.example',
             'content-type': 'application/json'
         }),
@@ -488,7 +427,6 @@ test('retries Gemini calls on transient failures', async () => {
 });
 
 test('cleans up expired rate limit buckets', async () => {
-    process.env.GEMINI_API_KEY = 'key';
     process.env.GENERATE_INSIGHT_MAX_REQUESTS = '1';
     process.env.GENERATE_INSIGHT_WINDOW_MS = '10';
 
@@ -499,7 +437,7 @@ test('cleans up expired rate limit buckets', async () => {
 
     const req = {
         method: 'POST',
-        headers: authorize({
+        headers: withGeminiKey({
             origin: 'https://allowed.example',
             'content-type': 'application/json',
             'x-forwarded-for': '2.3.4.5'
@@ -526,7 +464,6 @@ test('cleans up expired rate limit buckets', async () => {
 });
 
 test('enforces request timeout failures', async () => {
-    process.env.GEMINI_API_KEY = 'key';
     process.env.GENERATE_INSIGHT_TIMEOUT_MS = '1';
     process.env.GENERATE_INSIGHT_MAX_RETRIES = '0';
 
@@ -536,7 +473,7 @@ test('enforces request timeout failures', async () => {
 
     const req = {
         method: 'POST',
-        headers: authorize({
+        headers: withGeminiKey({
             origin: 'https://allowed.example',
             'content-type': 'application/json'
         }),
