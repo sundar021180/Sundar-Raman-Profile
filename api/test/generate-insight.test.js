@@ -426,6 +426,42 @@ test('retries Gemini calls on transient failures', async () => {
     assert.deepEqual(res.body, expectedPayload);
 });
 
+test('retries when fetch rejects with a network TypeError', async () => {
+    const expectedPayload = { success: true };
+    let attempts = 0;
+
+    const networkError = new TypeError('fetch failed');
+    networkError.cause = { code: 'ECONNRESET' };
+
+    global.fetch = async () => {
+        attempts += 1;
+        if (attempts === 1) {
+            throw networkError;
+        }
+
+        return {
+            ok: true,
+            json: async () => expectedPayload
+        };
+    };
+
+    const req = {
+        method: 'POST',
+        headers: withGeminiKey({
+            origin: 'https://allowed.example',
+            'content-type': 'application/json'
+        }),
+        body: { prompt: 'Hello' }
+    };
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    assert.equal(attempts, 2);
+    assert.deepEqual(res.statusCalls, [200]);
+    assert.deepEqual(res.body, expectedPayload);
+});
+
 test('cleans up expired rate limit buckets', async () => {
     process.env.GENERATE_INSIGHT_MAX_REQUESTS = '1';
     process.env.GENERATE_INSIGHT_WINDOW_MS = '10';

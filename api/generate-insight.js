@@ -168,6 +168,20 @@ const fetchWithTimeout = async (url, options, timeoutMs) => {
   }
 };
 
+const RETRYABLE_NETWORK_ERROR_CODES = new Set([
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'ECONNABORTED',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'ETIMEDOUT',
+  'EPIPE',
+  'ENETDOWN',
+  'ENETUNREACH',
+  'EHOSTUNREACH',
+  'EHOSTDOWN'
+]);
+
 const callGeminiWithRetry = async (payload, apiKey, cfg) => {
   const { timeoutMs, maxRetries } = cfg;
   const init = {
@@ -189,7 +203,13 @@ const callGeminiWithRetry = async (payload, apiKey, cfg) => {
       return resp.json();
     } catch (err) {
       lastError = err;
-      const retryable = err.name === 'AbortError' || err.name === 'FetchError' || err.message === 'Upstream request failed.';
+      const causeCode = err?.cause?.code || err?.code;
+      const networkError = err.name === 'TypeError' || (typeof causeCode === 'string' && RETRYABLE_NETWORK_ERROR_CODES.has(causeCode));
+      const retryable =
+        err.name === 'AbortError' ||
+        err.name === 'FetchError' ||
+        err.message === 'Upstream request failed.' ||
+        networkError;
       if (!retryable || attempt > maxRetries) throw lastError;
       await new Promise(r => setTimeout(r, 200 * attempt));
     }
