@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
-const modulePath = pathToFileURL(path.join(__dirname, '..', '..', 'js', 'modules', 'ai-generator.js')).href;
+const modulePath = pathToFileURL(path.join(__dirname, '..', 'public', 'js', 'modules', 'ai-generator.js')).href;
 
 class MockElement {
     constructor(tagName) {
