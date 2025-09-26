@@ -1,9 +1,10 @@
 /**
- * Vercel Serverless Function to securely generate AI insights.
- * - Handles CORS correctly (same-origin, explicit allow-list, and *.wildcards)
- * - Optional bearer-token enforcement in production
- * - Simple token-bucket rate limiting
- * - Timeout & limited retries for upstream requests
+ * Vercel Serverless Function: Generate AI insights using the *client's* Gemini API key.
+ * - Client provides Gemini key via headers (X-Gemini-Api-Key preferred; Authorization: Bearer <key> supported).
+ * - No server-managed "access tokens" required.
+ * - CORS (same-origin allowed, allow-list with wildcards), preflight handling.
+ * - Simple IP/token-based rate limiting.
+ * - Timeout + limited retries for upstream calls.
  */
 
 const crypto = require('node:crypto');
@@ -20,7 +21,7 @@ let lastRateLimitSweepAt = 0;
 const defaultRateLimitConfig = { maxRequests: 5, windowMs: 60_000 };
 const defaultRequestConfig   = { timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS, maxRetries: DEFAULT_MAX_RETRIES };
 
-/* ----------------------------- helpers ----------------------------- */
+/* ----------------------------- env helpers ----------------------------- */
 
 const normalizeEnvironmentValue = (v) => typeof v === 'string' ? v.trim().toLowerCase() : '';
 
@@ -37,23 +38,24 @@ const parseAllowedOrigins = () => {
   const { ALLOWED_ORIGINS } = process.env;
   if (typeof ALLOWED_ORIGINS === 'string' && ALLOWED_ORIGINS.trim()) {
     return new Set(
-      ALLOWED_ORIGINS.split(',')
-        .map(s => s.trim())
-        .filter(Boolean)
+      ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
     );
   }
-  // Non-prod: be permissive if not configured
+  // In non-prod, default to permissive CORS if not configured.
   if (!isProductionEnvironment()) return new Set(['*']);
-  // Prod without configuration: empty set -> will error
+  // In prod with no config: empty set means we’ll error with a clear message.
   return new Set();
 };
 
+/* --------------------------- CORS utilities --------------------------- */
+
 const isWildcardMatch = (origin, pattern) => {
-  // pattern like "*.vercel.app"
-  if (!pattern.startsWith('*.')) return false;
+  // Accept both "*.vercel.app" and "https://*.vercel.app" patterns in env.
+  const cleaned = pattern.replace(/^https?:\/\//i, '');
+  if (!cleaned.startsWith('*.')) return false;
   try {
     const { hostname } = new URL(origin);
-    const suffix = pattern.slice(2); // "vercel.app"
+    const suffix = cleaned.slice(2); // "vercel.app"
     return hostname === suffix || hostname.endsWith('.' + suffix);
   } catch {
     return false;
@@ -61,44 +63,58 @@ const isWildcardMatch = (origin, pattern) => {
 };
 
 const isOriginAllowed = (origin, allowed) => {
-  // Same-origin fetches often have no Origin header.
-  if (!origin) return true;                        // allow missing Origin (same-origin)
+  // Same-origin or non-CORS requests often have no Origin header -> allow.
+  if (!origin) return true;
   if (allowed.has('*')) return true;
   if (allowed.has(origin)) return true;
-
   for (const entry of allowed) {
-    if (entry.startsWith('*.') && isWildcardMatch(origin, entry)) return true;
+    if (entry.startsWith('*.') || entry.startsWith('https://*.') || entry.startsWith('http://*.')) {
+      if (isWildcardMatch(origin, entry)) return true;
+    }
   }
   return false;
 };
 
-const getCorsOriginToEcho = (origin, allowed) => {
-  if (!origin) return null;                        // only echo for cross-origin
+const corsOriginToEcho = (origin, allowed) => {
+  if (!origin) return null;               // only echo for cross-origin cases
   if (allowed.has('*')) return '*';
   if (allowed.has(origin)) return origin;
   for (const entry of allowed) {
-    if (entry.startsWith('*.') && isWildcardMatch(origin, entry)) return origin;
+    if (entry.startsWith('*.') || entry.startsWith('https://*.') || entry.startsWith('http://*.')) {
+      if (isWildcardMatch(origin, entry)) return origin;
+    }
   }
   return null;
 };
 
-const getAccessTokenFromHeader = (req) => {
-  const raw = req.headers?.authorization || req.headers?.Authorization;
-  if (typeof raw !== 'string') return null;
-  const m = raw.match(/^Bearer\s+(.+)$/i);
-  return m ? m[1].trim() : null;
+/* ----------------------------- misc helpers --------------------------- */
+
+const getClientGeminiKey = (req) => {
+  // Preferred: custom header avoids ambiguity.
+  const viaCustom = req.headers['x-gemini-api-key'];
+  if (typeof viaCustom === 'string' && viaCustom.trim()) {
+    return viaCustom.trim();
+  }
+  // Back-compat: Authorization: Bearer <key> (your current frontend already sends this).
+  const rawAuth = req.headers?.authorization || req.headers?.Authorization;
+  if (typeof rawAuth === 'string') {
+    const m = rawAuth.match(/^Bearer\s+(.+)$/i);
+    if (m) return m[1].trim();
+  }
+  return '';
 };
 
-const hashToken = (t) => crypto.createHash('sha256').update(t).digest('hex');
+const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex');
 
-const getClientKey = (req, hashedToken) => {
-  if (hashedToken) return `token:${hashedToken}`;
+const clientKeyForRateLimit = (req, clientGeminiKey) => {
+  // Prefer a stable token-based bucket if the user provided a key; otherwise IP.
+  if (clientGeminiKey) return `gem:${sha256(clientGeminiKey)}`;
   const fwd = req.headers['x-forwarded-for'];
   if (typeof fwd === 'string' && fwd.trim()) return fwd.split(',')[0].trim();
   return req.socket?.remoteAddress || 'unknown';
 };
 
-const pruneExpiredRateLimitBuckets = (now = Date.now()) => {
+const pruneExpiredBuckets = (now = Date.now()) => {
   if (now - lastRateLimitSweepAt < 60_000) return;
   lastRateLimitSweepAt = now;
   for (const [key, bucket] of rateLimitBuckets.entries()) {
@@ -106,26 +122,23 @@ const pruneExpiredRateLimitBuckets = (now = Date.now()) => {
   }
 };
 
-const isRateLimited = (clientKey, config, now = Date.now()) => {
-  if (!config.maxRequests || config.maxRequests < 0) return false;
-  pruneExpiredRateLimitBuckets(now);
-
-  const b = rateLimitBuckets.get(clientKey);
+const isRateLimited = (bucketKey, cfg, now = Date.now()) => {
+  if (!cfg.maxRequests || cfg.maxRequests < 0) return false;
+  pruneExpiredBuckets(now);
+  const b = rateLimitBuckets.get(bucketKey);
   if (!b || b.expiresAt <= now) {
-    rateLimitBuckets.set(clientKey, { count: 1, expiresAt: now + config.windowMs });
+    rateLimitBuckets.set(bucketKey, { count: 1, expiresAt: now + cfg.windowMs });
     return false;
   }
-  if (b.count >= config.maxRequests) return true;
+  if (b.count >= cfg.maxRequests) return true;
   b.count += 1;
   return false;
 };
 
-const secondsUntilReset = (clientKey, now = Date.now()) => {
-  const b = rateLimitBuckets.get(clientKey);
+const secondsUntilReset = (bucketKey, now = Date.now()) => {
+  const b = rateLimitBuckets.get(bucketKey);
   return b ? Math.max(0, Math.ceil((b.expiresAt - now) / 1000)) : 0;
 };
-
-const resetRateLimiter = () => rateLimitBuckets.clear();
 
 const getRateLimitConfig = () => {
   const n = Number(process.env.GENERATE_INSIGHT_MAX_REQUESTS ?? defaultRateLimitConfig.maxRequests);
@@ -145,16 +158,6 @@ const getRequestConfig = () => {
   };
 };
 
-const parseAccessTokens = () => {
-  const { GENERATE_INSIGHT_ACCESS_TOKENS } = process.env;
-  if (!GENERATE_INSIGHT_ACCESS_TOKENS) return new Set();
-  return new Set(
-    GENERATE_INSIGHT_ACCESS_TOKENS.split(',')
-      .map(s => s.trim())
-      .filter(Boolean)
-  );
-};
-
 const fetchWithTimeout = async (url, options, timeoutMs) => {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
@@ -172,7 +175,6 @@ const callGeminiWithRetry = async (payload, apiKey, cfg) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   };
-
   let attempt = 0, lastError;
   while (attempt <= maxRetries) {
     attempt += 1;
@@ -195,79 +197,52 @@ const callGeminiWithRetry = async (payload, apiKey, cfg) => {
   throw lastError || new Error('Failed to contact Gemini API.');
 };
 
-/* ----------------------------- handler ----------------------------- */
+/* ------------------------------- handler ------------------------------ */
 
 module.exports = async (req, res) => {
-  const allowedOrigins = parseAllowedOrigins();
-  const requestOrigin = req.headers.origin || '';
+  const allowed = parseAllowedOrigins();
+  const origin = req.headers.origin || '';
 
-  // In production, require ALLOWED_ORIGINS to be set (or '*')
-  if (allowedOrigins.size === 0 && isProductionEnvironment()) {
-    console.error('ALLOWED_ORIGINS is not configured in production.');
+  // Require CORS config in production.
+  if (allowed.size === 0 && isProductionEnvironment()) {
     return res.status(500).json({ error: "CORS configuration is missing on the server." });
   }
 
-  // Decide if allowed. Missing Origin => treat as same-origin and allow.
-  const originAllowed = isOriginAllowed(requestOrigin, allowedOrigins);
-  if (!originAllowed) {
+  // CORS decision
+  if (!isOriginAllowed(origin, allowed)) {
     return res.status(403).json({ error: "Origin not allowed." });
   }
-
-  // Set CORS headers only for cross-origin (when Origin exists).
-  const echoOrigin = getCorsOriginToEcho(requestOrigin, allowedOrigins);
-  if (echoOrigin) {
-    res.setHeader('Access-Control-Allow-Origin', echoOrigin);
+  const echo = corsOriginToEcho(origin, allowed);
+  if (echo) {
+    res.setHeader('Access-Control-Allow-Origin', echo);
     res.setHeader('Vary', 'Origin');
   }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Gemini-Api-Key');
   res.setHeader('Access-Control-Max-Age', '600');
 
-  // Preflight
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
 
-  // Enforce access tokens in production if configured
-  const accessTokens = parseAccessTokens();
-  const inProduction = isProductionEnvironment();
-  const shouldEnforceAccessToken = accessTokens.size > 0;
-  if (inProduction && !shouldEnforceAccessToken) {
-    console.error('Access token configuration missing in production.');
-    return res.status(500).json({ error: "Access token configuration is missing on the server." });
-  }
-
-  let hashedToken;
-  if (shouldEnforceAccessToken) {
-    const raw = getAccessTokenFromHeader(req);
-    if (!raw || !accessTokens.has(raw)) {
-      console.info('Rejected: missing/invalid access token.');
-      return res.status(401).json({ error: "A valid access token is required." });
-    }
-    hashedToken = hashToken(raw);
-  } else {
-    console.info('Access tokens not configured; skipping enforcement (non-production).');
-  }
-
-  // API key
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-  if (!GEMINI_API_KEY) {
-    return res.status(500).json({
-      error: "Gemini API key is not configured. Set GEMINI_API_KEY with your Gemini key only.",
-      docs: "https://ai.google.dev/gemini-api/docs/api-key"
-    });
-  }
-
-  // Method & body validation
   if (req.method !== 'POST') {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
+  // Content-Type
   const contentType = req.headers['content-type'] || '';
   if (!contentType.includes('application/json')) {
     return res.status(415).json({ error: "Content-Type must be application/json." });
   }
 
+  // Client-provided Gemini API key
+  const clientGeminiKey = getClientGeminiKey(req);
+  if (!clientGeminiKey) {
+    // Deliberately do not mention headers in detail to avoid encouraging sniffing.
+    return res.status(401).json({ error: "Gemini API key is required." });
+  }
+
+  // Validate body
   const { prompt } = req.body || {};
   if (typeof prompt !== 'string' || !prompt.trim()) {
     return res.status(400).json({ error: "Prompt is required in the request body." });
@@ -276,29 +251,28 @@ module.exports = async (req, res) => {
     return res.status(413).json({ error: "Prompt is too long." });
   }
 
-  // Rate limit
-  const clientKey = getClientKey(req, hashedToken);
+  // Rate limit (based on API key hash or IP)
+  const bucketKey = clientKeyForRateLimit(req, clientGeminiKey);
   const rlCfg = getRateLimitConfig();
   const now = Date.now();
-  if (isRateLimited(clientKey, rlCfg, now)) {
-    const retryAfter = secondsUntilReset(clientKey, now) || Math.ceil(rlCfg.windowMs / 1000);
+  if (isRateLimited(bucketKey, rlCfg, now)) {
+    const retryAfter = secondsUntilReset(bucketKey, now) || Math.ceil(rlCfg.windowMs / 1000);
     res.setHeader('Retry-After', retryAfter);
-    console.info('Rate limit exceeded for client', clientKey, 'retry after', retryAfter);
     return res.status(429).json({ error: "Too many requests. Please slow down." });
   }
 
-  // Call upstream
   try {
     const payload = { contents: [{ parts: [{ text: prompt }] }] };
     const reqCfg = getRequestConfig();
-    const data = await callGeminiWithRetry(payload, GEMINI_API_KEY, reqCfg);
+    const data = await callGeminiWithRetry(payload, clientGeminiKey, reqCfg);
     return res.status(200).json(data);
   } catch (err) {
+    // Do not log the API key—ever.
     console.error('API call error:', err);
     return res.status(500).json({ error: "Failed to generate insight." });
   }
 };
 
 /* ------------------------- test-only helpers ------------------------ */
-module.exports.__resetRateLimiter = resetRateLimiter;
+module.exports.__resetRateLimiter = () => rateLimitBuckets.clear();
 module.exports.__getRateLimiterSnapshot = () => ({ size: rateLimitBuckets.size });
