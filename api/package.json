@@ -9,7 +9,7 @@
     "build": "echo \"no build step\"",
     "dev": "vercel dev",
     "start": "vercel dev",
-    "test": "node --test \"../test/**/*.test.js\""
+    "test": "node --test \"./test/**/*.test.js\""
   },
   "dependencies": {}
 }
